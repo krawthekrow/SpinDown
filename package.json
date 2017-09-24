@@ -1,0 +1,17 @@
+{
+  "name": "markbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "dependencies": {
+    "funsocietyirc-client": "^0.0.15",
+    "irc": "^0.5.2",
+    "mkdirp": "^0.5.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "krawthekrow",
+  "license": "MIT"
+}
