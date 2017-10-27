@@ -25,6 +25,10 @@ class GeneralPlugin{
                 const echoSeparator = ' ';
                 const splitMsg = argstring.split(' ');
                 const lastWord = splitMsg[splitMsg.length - 1];
+                if (argstring.length > 128){
+                    this.env.sendAction(returnChannel, 'doesn\'t feel like echoing such a long string :(');
+                    return;
+                }
                 this.env.sendMessage(returnChannel, zws +
                     argstring + echoSeparator +
                     '\x0314' + zws + lastWord + echoSeparator + '\x03' +
@@ -59,16 +63,16 @@ class GeneralPlugin{
                         this.env.sendHighlight(returnChannel, msgInfo.sender, 'Only ' + this.observations.length + ' observations! Add a new one with addobs.');
                 }
                 else
-                    this.env.sendHighlight(returnChannel, msgInfo.sender, 'Usage: getobs <id>');
+                    this.env.printHelp(returnChannel, 'getobs', msgInfo);
             },
             'shrug': (returnChannel, argstring, msgInfo) => {
                 this.env.sendMessage(returnChannel, String.raw`¯\_(ツ)_/¯`);
             },
             'supershrug': (returnChannel, argstring, msgInfo) => {
+                this.env.sendMessage(returnChannel, '_shrug');
                 this.env.sendMessage(returnChannel, '!shrug');
                 this.env.sendMessage(returnChannel, ';shrug');
                 this.env.sendMessage(returnChannel, '&shrug');
-                this.env.sendMessage(returnChannel, '%shrug');
                 this.env.sendMessage(returnChannel, String.raw`¯\_(ツ)_/¯`);
             },
             'explode': (returnChannel, argstring, msgInfo) => {

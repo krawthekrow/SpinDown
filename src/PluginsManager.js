@@ -2,8 +2,10 @@ const config = require('../config.js');
 const PermissionsManager = require('./PermissionsManager.js');
 
 const PLUGIN_NAMES = new Map([
+    ['reload', 'ReloadPlugin'],
     ['admin', 'AdminPlugin'],
-    ['general', 'GeneralPlugin']
+    ['general', 'GeneralPlugin'],
+    ['help', 'HelpPlugin']
 ]);
 
 class PluginsManager {
@@ -36,7 +38,7 @@ class PluginsManager {
             }
         }
     }
-    handleMessage(from, to, message){
+    handleMessage(from, to, message, messageData){
         for(const [pluginName, plugin] of this.plugins){
             if('handleMessage' in plugin){
                 plugin.handleMessage(from, to, message);
@@ -54,7 +56,11 @@ class PluginsManager {
         for(const [pluginName, plugin] of this.plugins){
             const [cmd, argstring] = this.extractCmd(message);
             plugin.handleCommand(cmd, argstring, returnChannel, {
-                sender: from,
+                sender: {
+                    nick: messageData.nick,
+                    username: messageData.user,
+                    hostmask: messageData.host
+                },
                 inQuery: inQuery
             });
         }
@@ -69,6 +75,11 @@ class PluginsManager {
         }
         return [cmd, argstring];
     }
+    printHelp(returnChannel, query, msgInfo){
+        this.sendHighlight(returnChannel, msgInfo.sender,
+            this.plugins.get('help').getHelp(query)
+        );
+    }
     sendAction(channel, message){
         this.client.action(channel, message);
     }
@@ -76,7 +87,7 @@ class PluginsManager {
         this.client.say(channel, message);
     }
     sendHighlight(channel, user, message){
-        this.sendMessage(channel, user + ': ' + message);
+        this.sendMessage(channel, user.nick + ': ' + message);
     }
 };
 
