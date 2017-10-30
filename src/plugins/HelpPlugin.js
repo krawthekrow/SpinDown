@@ -59,6 +59,7 @@ HelpPlugin.HELP_CONTENT = {
         'join': 'join <channel> -- Join a channel.',
         'part': 'part <channel> <message> -- Part a channel with a message.',
         'eval': 'eval <script> -- Summon the power of Javascript.',
+        'exec': 'exec <script> -- Summon the power of Bash.',
         'say': 'say <channel> <message> -- Say a message in another channel.',
         'raw': 'raw <message> -- Send a raw message.',
         'highlight': 'highlight <regex> -- Annoy everyone matching a regex.',

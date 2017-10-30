@@ -1,3 +1,5 @@
+const { exec } = require ('child_process');
+
 class AdminPlugin {
     constructor(env){
         this.env = env;
@@ -26,6 +28,20 @@ class AdminPlugin {
                     return;
                 }
                 this.env.sendHighlight(returnChannel, msgInfo.sender, evalRes.toString());
+            },
+            'exec': (returnChannel, argstring, msgInfo) => {
+                exec(argstring, (err, stdout, stderr) => {
+                    if(err){
+                        console.log(err);
+                        return;
+                    }
+                    this.env.sendHighlight(
+                        returnChannel, msgInfo.sender, stdout);
+                    if(stderr != ''){
+                        this.env.sendHighlight(
+                            returnChannel, msgInfo.sender, stderr);
+                    }
+                });
             },
             'say': (returnChannel, argstring, msgInfo) => {
                 let [channel, message] = this.env.extractCmd(argstring);
