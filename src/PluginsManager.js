@@ -13,9 +13,10 @@ class PluginsManager {
         this.client = client;
 
         this.commandPrefix = config.COMMAND_PREFIX;
-        this.whitelistedChannels = new Set(
-            config.AUTOJOIN.concat(config.CHANNEL_WHITELIST)
-        );
+
+        const whitelistArr = config.CHANNEL_WHITELIST;
+        if ('AUTOJOIN' in config) whitelistArr.push(...config.AUTOJOIN);
+        this.whitelistedChannels = new Set(whitelistArr);
 
         this.permissions = new PermissionsManager();
 

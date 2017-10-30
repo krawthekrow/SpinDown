@@ -2,13 +2,19 @@ const irc = require('irc');
 
 const config = require('./config.js');
 
-const client = new irc.Client(config.SERVER, config.BOT_NICK, {
+const clientConfig = {
     userName: config.BOT_USERNAME,
     realName: config.BOT_REALNAME,
     sasl: true,
-    password: config.BOT_SASL_PASSWORD,
-    channels: config.AUTOJOIN
-});
+    password: config.BOT_SASL_PASSWORD
+};
+
+if('PORT' in config) clientConfig.port = config.PORT;
+if('SECURE' in config) clientConfig.secure = config.SECURE;
+if('SELF_SIGNED' in config) clientConfig.selfSigned = config.SELF_SIGNED;
+if('AUTOJOIN' in config) clientConfig.channels = config.AUTOJOIN;
+
+const client = new irc.Client(config.SERVER, config.BOT_NICK, clientConfig);
 
 let pluginsManager = null;
 const reloadPluginsManager = () => {
@@ -43,4 +49,5 @@ client.on('join', (channel, nick, message) => {
 });
 client.on('registered', (msg) => {
     console.log('Connected!');
+    client.join('#powder-bots');
 });
