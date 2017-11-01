@@ -27,6 +27,9 @@ module.exports = {
     PLUGINS_CONFIG: {
         GENERAL: {
             OBSERVATIONS_FILENAME: path.resolve(__dirname, 'db/observations.txt')
+        },
+        HANGMAN: {
+            WORDLIST_FILENAME: path.resolve(__dirname, 'db/wordlist_long.txt')
         }
     }
 };

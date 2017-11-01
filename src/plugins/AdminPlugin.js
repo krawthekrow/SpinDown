@@ -60,38 +60,6 @@ class AdminPlugin {
                         .map(nick => nick + ': ').join('')
                     );
                 }
-            },
-            'mode': (returnChannel, argstring, msgInfo) => {
-                if(!msgInfo.inQuery){
-                    const args = argstring.split(' ');
-                    if(args.length == 1){
-                        this.client.send(
-                            'mode', returnChannel, args[0]);
-                    }
-                    else if(args.length == 2){
-                        this.client.send(
-                            'mode', returnChannel, args[1], args[0]);
-                    }
-                    else{
-                        this.env.printHelp(returnChannel, 'mode', msgInfo);
-                    }
-                }
-            },
-            'op': (returnChannel, argstring, msgInfo) => {
-                if(!msgInfo.inQuery){
-                    const opTarget = (argstring == '') ?
-                        msgInfo.sender.nick : argstring;
-                    this.client.send(
-                        'mode', returnChannel, '+o', opTarget);
-                }
-            },
-            'deop': (returnChannel, argstring, msgInfo) => {
-                if(!msgInfo.inQuery){
-                    const opTarget = (argstring == '') ?
-                        msgInfo.sender.nick : argstring;
-                    this.client.send(
-                        'mode', returnChannel, '-o', opTarget);
-                }
             }
         };
     }

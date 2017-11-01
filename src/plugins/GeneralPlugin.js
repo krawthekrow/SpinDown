@@ -25,7 +25,7 @@ class GeneralPlugin{
                 const echoSeparator = ' ';
                 const splitMsg = argstring.split(' ');
                 const lastWord = splitMsg[splitMsg.length - 1];
-                if (argstring.length > 128){
+                if(argstring.length > 128){
                     this.env.sendAction(returnChannel, 'doesn\'t feel like echoing such a long string :(');
                     return;
                 }

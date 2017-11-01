@@ -54,6 +54,12 @@ HelpPlugin.HELP_CONTENT = {
         'explode': 'explode <thing> -- Explodes a thing.',
         'poke': 'poke <nick> -- Poke someone.'
     },
+    'hangman': {
+        'hmstart': 'hmstart [<channel> <solution>] -- Start a hangman game in <channel>! If you hmstart in a channel, SpinDown will choose a random common word for you.',
+        'hmstop': 'hmstop -- Stop a hangman game.',
+        'hmshow': 'hmshow -- Forgot something? Show all the game data again!',
+        'hmguess': 'hmguess <char> -- Guess a character... did you get it right?'
+    },
     'admin': {
         'die': 'die -- Kill SpinDown. Once and for all.',
         'join': 'join <channel> -- Join a channel.',
@@ -62,7 +68,9 @@ HelpPlugin.HELP_CONTENT = {
         'exec': 'exec <script> -- Summon the power of Bash.',
         'say': 'say <channel> <message> -- Say a message in another channel.',
         'raw': 'raw <message> -- Send a raw message.',
-        'highlight': 'highlight <regex> -- Annoy everyone matching a regex.',
+        'highlight': 'highlight <regex> -- Annoy everyone matching a regex.'
+    },
+    'channel': {
         'mode': 'mode [<nick>] <mode changes> -- Change someone\'s modes for this channel, or the channel\'s modes if <nick> is omitted.',
         'op': 'op [<nick>] -- Make someone op. If <nick> is omitted, make yourself op.',
         'deop': 'deop [<nick>] -- Make someone not op. If <nick> is omitted, make yourself not op.'

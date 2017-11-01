@@ -4,7 +4,9 @@ const PermissionsManager = require('./PermissionsManager.js');
 const PLUGIN_NAMES = new Map([
     ['reload', 'ReloadPlugin'],
     ['admin', 'AdminPlugin'],
+    ['channel', 'ChannelManagementPlugin'],
     ['general', 'GeneralPlugin'],
+    ['hangman', 'HangmanPlugin'],
     ['help', 'HelpPlugin']
 ]);
 
@@ -15,7 +17,7 @@ class PluginsManager {
         this.commandPrefix = config.COMMAND_PREFIX;
 
         const whitelistArr = config.CHANNEL_WHITELIST;
-        if ('AUTOJOIN' in config) whitelistArr.push(...config.AUTOJOIN);
+        if('AUTOJOIN' in config) whitelistArr.push(...config.AUTOJOIN);
         this.whitelistedChannels = new Set(whitelistArr);
 
         this.permissions = new PermissionsManager();

@@ -20,6 +20,7 @@ let pluginsManager = null;
 const reloadPluginsManager = () => {
     const filename = './src/PluginsManager.js';
     delete require.cache[require.resolve(filename)];
+    delete require.cache[require.resolve('./config.js')];
     try{
         const pluginsManagerClass = require(filename);
         pluginsManager = new pluginsManagerClass(client);
