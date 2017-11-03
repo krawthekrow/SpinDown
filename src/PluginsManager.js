@@ -16,9 +16,9 @@ class PluginsManager {
 
         this.commandPrefix = config.COMMAND_PREFIX;
 
-        const whitelistArr = config.CHANNEL_WHITELIST;
-        if('AUTOJOIN' in config) whitelistArr.push(...config.AUTOJOIN);
-        this.whitelistedChannels = new Set(whitelistArr);
+        // const whitelistArr = config.CHANNEL_WHITELIST;
+        // if('AUTOJOIN' in config) whitelistArr.push(...config.AUTOJOIN);
+        // this.whitelistedChannels = new Set(whitelistArr);
 
         this.permissions = new PermissionsManager();
 
@@ -52,7 +52,7 @@ class PluginsManager {
         const returnChannel = inQuery ? from : to;
         const isPrefixed = message.startsWith(this.commandPrefix);
         if(!isPrefixed && !inQuery) return false;
-        if(!inQuery && !this.whitelistedChannels.has(to)) return false;
+        // if(!inQuery && !this.whitelistedChannels.has(to)) return false;
         if(isPrefixed) message = message.substr(this.commandPrefix.length);
 
         console.log('<' + from + (inQuery ? '' : (':' + to)) + '> ' + message);

@@ -14,10 +14,11 @@ module.exports = {
         '#my-fav-channel'
     ], // optional
     COMMAND_PREFIX: '::',
-    CHANNEL_WHITELIST: [
-        // AUTOJOIN channels automatically added here
-        '##another-channel-not-autojoined'
-    ],
+    // whitelist feature disabled; not useful
+    // CHANNEL_WHITELIST: [
+    //     // AUTOJOIN channels automatically added here
+    //     '##another-channel-not-autojoined'
+    // ],
     PERMISSION_GROUPS: [
         ['admin', [{
             username: 'YOUR_USERNAME',
