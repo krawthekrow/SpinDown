@@ -5,7 +5,6 @@ const config = require('./config.js');
 const clientConfig = {
     userName: config.BOT_USERNAME,
     realName: config.BOT_REALNAME,
-    sasl: true,
     password: config.BOT_SASL_PASSWORD
 };
 
@@ -50,5 +49,4 @@ client.on('join', (channel, nick, message) => {
 });
 client.on('registered', (msg) => {
     console.log('Connected!');
-    client.join('#powder-bots');
 });

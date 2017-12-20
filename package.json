@@ -1,16 +1,21 @@
 {
   "name": "markbot",
   "version": "1.0.0",
-  "description": "",
+  "description": "Yet another IRC bot.",
   "main": "app.js",
   "dependencies": {
     "irc": "github:matrix-org/node-irc",
-    "mkdirp": "^0.5.1"
+    "mkdirp": "^0.5.1",
+    "request": "^2.83.0"
   },
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "krawthekrow",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/krawthekrow/markbot.git"
+  }
 }

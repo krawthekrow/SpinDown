@@ -31,6 +31,9 @@ module.exports = {
         },
         HANGMAN: {
             WORDLIST_FILENAME: path.resolve(__dirname, 'db/wordlist_long.txt')
+        },
+        POWDER: {
+            CACHE_FILENAME: path.resolve(__dirname, 'db/powder_cache.txt')
         }
     }
 };

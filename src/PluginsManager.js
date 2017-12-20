@@ -7,6 +7,7 @@ const PLUGIN_NAMES = new Map([
     ['channel', 'ChannelManagementPlugin'],
     ['general', 'GeneralPlugin'],
     ['hangman', 'HangmanPlugin'],
+    ['powder', 'PowderPlugin'],
     ['help', 'HelpPlugin']
 ]);
 
