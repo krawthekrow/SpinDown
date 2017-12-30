@@ -5,7 +5,9 @@ const config = require('./config.js');
 const clientConfig = {
     userName: config.BOT_USERNAME,
     realName: config.BOT_REALNAME,
-    password: config.BOT_SASL_PASSWORD
+    password: config.BOT_SASL_PASSWORD,
+    retryCount: 0,
+    autoRejoin: true
 };
 
 if('PORT' in config) clientConfig.port = config.PORT;
@@ -17,6 +19,9 @@ const client = new irc.Client(config.SERVER, config.BOT_NICK, clientConfig);
 
 let pluginsManager = null;
 const reloadPluginsManager = () => {
+    if (pluginsManager != null) {
+        pluginsManager.dispose();
+    }
     const filename = './src/PluginsManager.js';
     delete require.cache[require.resolve(filename)];
     delete require.cache[require.resolve('./config.js')];

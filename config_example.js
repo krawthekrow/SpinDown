@@ -27,13 +27,18 @@ module.exports = {
     ],
     PLUGINS_CONFIG: {
         GENERAL: {
-            OBSERVATIONS_FILENAME: path.resolve(__dirname, 'db/observations.txt')
+            OBSERVATIONS_FILENAME:
+                path.resolve(__dirname, 'db/observations.txt')
         },
         HANGMAN: {
-            WORDLIST_FILENAME: path.resolve(__dirname, 'db/wordlist_long.txt')
+            WORDLIST_FILENAME:
+                path.resolve(__dirname, 'db/wordlist_long.txt')
         },
         POWDER: {
-            CACHE_FILENAME: path.resolve(__dirname, 'db/powder_cache.txt')
+            CACHE_FILENAME: path.resolve(__dirname, 'db/powder_cache.txt'),
+            WATCH_FILENAME:
+                path.resolve(__dirname, 'db/powder_watch.txt'),
+            UPDATE_MIN_INTERVAL: 10 * 1000
         }
     }
 };

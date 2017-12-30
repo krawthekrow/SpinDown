@@ -5,7 +5,8 @@ class ReloadPlugin {
         this.cmds = {
             'reload': (returnChannel, argstring, msgInfo) => {
                 this.env.reloadSelf();
-                this.env.sendHighlight(returnChannel, msgInfo.sender, 'Reloaded!');
+                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                    'Reloaded!');
             }
         };
     }

@@ -81,6 +81,14 @@ HelpPlugin.HELP_CONTENT = {
     'help': {
         'help': 'help <query> -- Ask SpinDown for help because you\'re too lazy to figure things out yourself.',
         'list': 'list <query> -- List commands in a category, or print the help string for a command. Definitely not the same thing as help.'
+    },
+    'powder': {
+        'pwatchadd': 'pwatchadd <users> -- Add <users> (space-separated usernames) to your watchlist.',
+        'pwatchrem': 'pwatchrem <users> -- Remove <users> (space-separated usernames) from your watchlist.',
+        'pwatchlist': 'pwatchlist [<nick>] -- See <nick>\'s current watchlist. If <nick> is omitted, see your own watchlist.',
+        'pcacheclear': 'pcacheclear [<type>] -- Clear SpinDown\'s save cache. If <type> is provided, clear the cache specified by <type>.',
+        'pwatchclear': 'pwatchclear [all] -- Clear your watchlist. If \'all\' is provided, clear everyone\'s watchlist.',
+        'pcommentwatch': 'pcommentwatch <user>|@stop -- Watch for comments on any of your saves. <user> should be your TPT username. If \'@stop\' is provided, stop watching for comments.'
     }
 };
 

@@ -6,6 +6,7 @@ class AdminPlugin {
         this.client = this.env.client;
         this.cmds = {
             'die': (returnChannel, argstring, msgInfo) => {
+                this.env.dispose();
                 this.client.disconnect('*BOOM*');
             },
             'join': (returnChannel, argstring, msgInfo) => {

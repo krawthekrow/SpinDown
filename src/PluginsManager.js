@@ -28,6 +28,13 @@ class PluginsManager {
         this.plugins = new Map();
         this.reloadPlugins();
     }
+    dispose(){
+        for(const [pluginName, plugin] of this.plugins){
+            if('dispose' in plugin){
+                plugin.dispose();
+            }
+        }
+    }
     reloadPlugins(){
         for(const [name, filename] of PLUGIN_NAMES){
             const fullFilename = './plugins/' + filename + '.js';
@@ -91,7 +98,12 @@ class PluginsManager {
         this.client.say(channel, message);
     }
     sendHighlight(channel, user, message){
-        this.sendMessage(channel, user.nick + ': ' + message);
+        if (channel == user.nick) {
+            this.sendMessage(channel, message);
+        }
+        else {
+            this.sendMessage(channel, user.nick + ': ' + message);
+        }
     }
 };
 
