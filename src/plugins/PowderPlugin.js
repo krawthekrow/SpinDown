@@ -210,6 +210,7 @@ class PowderPlugin {
         };
         this.taskList = [];
         this.currTaskIndex = 0;
+        this.currCommentsSweepUserIndex = 0;
         this.currCommentsSweepPage = 0;
         this.updateTimeout = null;
         this.active = true;
@@ -272,7 +273,7 @@ class PowderPlugin {
             this.getFpUpdates((fpUpdates) => {
                 for (const save of fpUpdates) {
                     this.env.sendMessage('#powder-subframe',
-                        `[Subframe FP Update: http://tpt.io/~${save.ID}]`);
+                        `Subframe FP Update; http://tpt.io/~${save.ID}`);
                 }
                 setImmediate(() => {
                     this.doTask();
@@ -280,13 +281,23 @@ class PowderPlugin {
             });
             break;
         case 'commentsSweep': {
-            const users = Object.keys(this.watch.comments);
-            this.getCommentUpdates(users, this.currCommentsSweepPage,
+            const users = Object.keys(this.watch.comments).sort();
+            if (users.length == 0) {
+                setImmediate(() => {
+                    this.doTask();
+                });
+            }
+            if (this.currCommentsSweepUserIndex >= users.length) {
+                this.currCommentsSweepUserIndex = 0;
+            }
+            this.getCommentUpdates(users[this.currCommentsSweepUserIndex],
+                this.currCommentsSweepPage,
                 (numSaves, commentUpdates) => {
 
                 this.currCommentsSweepPage++;
                 if (this.currCommentsSweepPage * 16 > numSaves) {
                     this.currCommentsSweepPage = 0;
+                    this.currCommentsSweepUserIndex++;
                 }
                 for (const updateData of commentUpdates) {
                     this.taskList.push({
@@ -307,10 +318,25 @@ class PowderPlugin {
 
                     const watchers = Object.keys(
                         this.watch.comments[currTask.save.Username]);
-                    for(const watcher of watchers) {
+                    for (const watcher of watchers) {
+                        if (commentUpdates.every((comment) => {
+                            return comment.Username ==
+                                currTask.save.Username;
+                            })) {
+
+                            continue;
+                        }
                         this.env.sendMessage(watcher,
-                            `New comments for '${currTask.save.Name}' (http://tpt.io/~${currTask.save.ID}):`);
-                        for(const comment of commentUpdates) {
+                            `New comments for '${currTask.save.Name}'; http://tpt.io/~${currTask.save.ID}`);
+                        for (let i = commentUpdates.length - 1;
+                            i >= 0; i--) {
+
+                            const comment = commentUpdates[i];
+                            if (comment.Username ==
+                                currTask.save.Username) {
+
+                                continue;
+                            }
                             this.env.sendMessage(watcher,
                                 `<${comment.Username}> ${comment.Text}`);
                         }
@@ -345,11 +371,11 @@ class PowderPlugin {
             const updatedType = (save.PublishedTime == save.Updated) ?
                 'New' : 'Updated';
             this.env.sendMessage(returnChannel,
-                `[${updatedType}: '${save.Name}' by ${save.Username}; http://tpt.io/~${save.ID}]`);
+                `${updatedType}: '${save.Name}' by ${save.Username}; http://tpt.io/~${save.ID}`);
         }
         else{
             this.env.sendMessage(returnChannel,
-                `['${save.Name}' by ${save.Username}; http://tpt.io/~${save.ID}]`);
+                `'${save.Name}' by ${save.Username}; http://tpt.io/~${save.ID}`);
         }
     }
     getUserUpdates(users, handleUpdates, maxUpdates=100){
@@ -443,14 +469,9 @@ class PowderPlugin {
             handleUpdates(res);
         });
     }
-    getCommentUpdates(users, pageNum, handleUpdates){
-        if (users.length == 0) {
-            handleUpdates(0, []);
-            return;
-        }
-        const usersConcat = users.join(',');
+    getCommentUpdates(user, pageNum, handleUpdates){
         const searchReq =
-            `http://powdertoy.co.uk/Browse.json?Search_Query=user%3A${usersConcat}+sort%3Adate&PageNum=${pageNum}`;
+            `http://powdertoy.co.uk/Browse.json?Search_Query=user%3A${user}+sort%3Adate&PageNum=${pageNum}`;
         request(searchReq, {
             json: true
         }, (err, resp, body) => {
