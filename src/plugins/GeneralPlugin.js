@@ -68,11 +68,27 @@ class GeneralPlugin{
             'shrug': (returnChannel, argstring, msgInfo) => {
                 this.env.sendMessage(returnChannel, String.raw`¯\_(ツ)_/¯`);
             },
+            'supersupershrug': (returnChannel, argstring, msgInfo) => {
+                this.env.sendMessage(returnChannel, '_shrug');
+                this.env.sendMessage(returnChannel, '!shrug');
+                this.env.sendMessage(returnChannel, ';shrug');
+                this.env.sendMessage(returnChannel, '&shrug');
+                this.env.sendMessage(returnChannel, '%shrug');
+                this.env.sendMessage(returnChannel, ',shrug');
+                this.env.sendMessage(returnChannel, '#?shrug');
+                this.env.sendMessage(returnChannel, '?shrug');
+                this.env.sendMessage(returnChannel, '$shrug');
+                this.env.sendMessage(returnChannel, '+shrug');
+                this.env.sendMessage(returnChannel, '=shrug');
+                this.env.sendMessage(returnChannel, '-shrug');
+                this.env.sendMessage(returnChannel, String.raw`¯\_(ツ)_/¯`);
+            },
             'supershrug': (returnChannel, argstring, msgInfo) => {
                 this.env.sendMessage(returnChannel, '_shrug');
                 this.env.sendMessage(returnChannel, '!shrug');
                 this.env.sendMessage(returnChannel, ';shrug');
                 this.env.sendMessage(returnChannel, '&shrug');
+                this.env.sendMessage(returnChannel, ',shrug');
                 this.env.sendMessage(returnChannel, String.raw`¯\_(ツ)_/¯`);
             },
             'explode': (returnChannel, argstring, msgInfo) => {
@@ -83,6 +99,9 @@ class GeneralPlugin{
                     this.env.sendMessage(returnChannel, 'pokepokepokepokepoke');
                 else
                     this.env.sendAction(returnChannel, 'POKES \u0002' + argstring + '\u0002');
+            },
+            'murder': (returnChannel, argstring, msgInfo) => {
+                this.env.sendAction(returnChannel, ' stabs \u0002' + argstring.trimRight().trimLeft() + '\u0002 with a knife');
             }
         };
     }

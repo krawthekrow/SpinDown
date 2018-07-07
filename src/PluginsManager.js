@@ -11,6 +11,8 @@ const PLUGIN_NAMES = new Map([
     ['help', 'HelpPlugin']
 ]);
 
+const ATTACK_REGEX = /^.attack\s*SpinDown\s*$/
+
 class PluginsManager {
     constructor(client){
         this.client = client;
@@ -59,21 +61,30 @@ class PluginsManager {
         const inQuery = to == this.client.nick;
         const returnChannel = inQuery ? from : to;
         const isPrefixed = message.startsWith(this.commandPrefix);
-        if(!isPrefixed && !inQuery) return false;
-        // if(!inQuery && !this.whitelistedChannels.has(to)) return false;
+
+        const msgInfo = {
+            sender: {
+                nick: messageData.nick,
+                username: messageData.user,
+                hostmask: messageData.host
+            },
+            inQuery: inQuery
+        };
         if(isPrefixed) message = message.substr(this.commandPrefix.length);
+        if(!isPrefixed && !inQuery) {
+            if(message.match(ATTACK_REGEX)) {
+                this.sendMessage(
+                    returnChannel, '^attack ' + msgInfo.sender.nick);
+                return true;
+            }
+            return false;
+        }
+        // if(!inQuery && !this.whitelistedChannels.has(to)) return false;
 
         console.log('<' + from + (inQuery ? '' : (':' + to)) + '> ' + message);
         for(const [pluginName, plugin] of this.plugins){
             const [cmd, argstring] = this.extractCmd(message);
-            plugin.handleCommand(cmd, argstring, returnChannel, {
-                sender: {
-                    nick: messageData.nick,
-                    username: messageData.user,
-                    hostmask: messageData.host
-                },
-                inQuery: inQuery
-            });
+            plugin.handleCommand(cmd, argstring, returnChannel, msgInfo);
         }
         return true;
     }
