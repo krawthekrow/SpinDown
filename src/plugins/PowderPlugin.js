@@ -117,7 +117,7 @@ class PowderPlugin {
                         watchList.push(user);
                     }
                 }
-                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                this.env.sendNotice(msgInfo.sender.nick,
                     (watchList.length > 0) ? watchList.join(', ') :
                     'Watchlist empty!');
             },
@@ -300,6 +300,7 @@ class PowderPlugin {
                     this.currCommentsSweepUserIndex++;
                 }
                 for (const updateData of commentUpdates) {
+                    // console.log(`fetching ${updateData.newComments} comments for save ${updateData.save.ID}`);
                     this.taskList.push({
                         type: 'comments',
                         save: updateData.save,
@@ -315,7 +316,7 @@ class PowderPlugin {
         case 'comments':
             this.getComments(currTask.save, currTask.newComments,
                 (commentUpdates) => {
-
+                    // console.log(`announcing ${commentUpdates.length} comments for save ${currTask.save.ID}`);
                     const watchers = Object.keys(
                         this.watch.comments[currTask.save.Username]);
                     for (const watcher of watchers) {
@@ -341,6 +342,8 @@ class PowderPlugin {
                                 `<${comment.Username}> ${comment.Text}`);
                         }
                     }
+                    this.cache.comments[currTask.save.ID] = currTask.save.Comments;
+                    this.saveCache();
                     setImmediate(() => {
                         this.doTask();
                     });
@@ -483,18 +486,19 @@ class PowderPlugin {
             const res = [];
             for (let i = 0; i < body.Saves.length; i++) {
                 const saveId = body.Saves[i].ID;
-                if (saveId in this.cache.comments &&
-                    body.Saves[i].Comments > this.cache.comments[saveId]) {
-
+                let cacheCommentCount = 0;
+                if (saveId in this.cache.comments) {
+                    cacheCommentCount = this.cache.comments[saveId];
+                }
+                // console.log(`found ${body.Saves[i].Comments} comments for save ${saveId} (${cacheCommentCount} in cache)`);
+                if (body.Saves[i].Comments > cacheCommentCount) {
                     res.push({
                         save: body.Saves[i],
                         newComments: body.Saves[i].Comments -
-                            this.cache.comments[saveId]
+                            cacheCommentCount
                     });
                 }
-                this.cache.comments[saveId] = body.Saves[i].Comments;
             }
-            this.saveCache();
             handleUpdates(body.Count, res);
         });
     }

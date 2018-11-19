@@ -105,6 +105,9 @@ class PluginsManager {
     sendAction(channel, message){
         this.client.action(channel, message);
     }
+    sendNotice(channel, message){
+        this.client.notice(channel, message);
+    }
     sendMessage(channel, message){
         this.client.say(channel, message);
     }
