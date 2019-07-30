@@ -14,16 +14,20 @@ module.exports = {
         '#my-fav-channel'
     ], // optional
     COMMAND_PREFIX: '::',
-    // whitelist feature disabled; not useful
-    // CHANNEL_WHITELIST: [
-    //     // AUTOJOIN channels automatically added here
-    //     '##another-channel-not-autojoined'
-    // ],
     PERMISSION_GROUPS: [
         ['admin', [{
             username: 'YOUR_USERNAME',
             hostmask: 'YOUR_HOSTMASK' // e.g. unaffiliated/username
         }]]
+    ],
+    BOT_DISCORD_TOKEN: 'YOUR_TOKEN', // optional
+    BOT_DISCORD_BRIDGE_IRC_CHANNEL: '#channel', // goes with BOT_DISCORD_TOKEN
+    BOT_DISCORD_BRIDGE_DISCORD_CHANNEL: 'channel-id', // goes with BOT_DISCORD_TOKEN
+    BOT_DISCORD_BRIDGE_IRC_WHITELIST: [
+        // BOT_DISCORD_BRIDGE_IRC_CHANNEL automatically added to whitelist
+    ],
+    BOT_DISCORD_BRIDGE_DISCORD_WHITELIST: [
+        // BOT_DISCORD_BRIDGE_DISCORD_CHANNEL automatically added to whitelist
     ],
     PLUGINS_CONFIG: {
         GENERAL: {
@@ -40,5 +44,5 @@ module.exports = {
                 path.resolve(__dirname, 'db/powder_watch.txt'),
             UPDATE_MIN_INTERVAL: 10 * 1000
         }
-    }
+    },
 };

@@ -14,14 +14,15 @@ const PLUGIN_NAMES = new Map([
 const ATTACK_REGEX = /^.attack\s*SpinDown\s*$/
 
 class PluginsManager {
-    constructor(client){
+    constructor(client, discordCli){
         this.client = client;
+        this.discordCli = discordCli;
+
+        let bridgeIrcWhitelistArr = config.BOT_DISCORD_BRIDGE_IRC_WHITELIST;
+        bridgeIrcWhitelistArr.push(config.BOT_DISCORD_BRIDGE_IRC_CHANNEL);
+        this.bridgeIrcWhitelist = new Set(bridgeIrcWhitelistArr);
 
         this.commandPrefix = config.COMMAND_PREFIX;
-
-        // const whitelistArr = config.CHANNEL_WHITELIST;
-        // if('AUTOJOIN' in config) whitelistArr.push(...config.AUTOJOIN);
-        // this.whitelistedChannels = new Set(whitelistArr);
 
         this.permissions = new PermissionsManager();
 
@@ -37,6 +38,13 @@ class PluginsManager {
             }
         }
     }
+    tryInitDiscordChannel() {
+        if (this.discordChannel != null)
+            return true;
+        this.discordChannel = this.discordCli.channels.get(
+            config.BOT_DISCORD_BRIDGE_DISCORD_CHANNEL);
+        return this.discordChannel != null;
+    }
     reloadPlugins(){
         for(const [name, filename] of PLUGIN_NAMES){
             const fullFilename = './plugins/' + filename + '.js';
@@ -51,7 +59,10 @@ class PluginsManager {
             }
         }
     }
-    handleMessage(from, to, message, messageData){
+    handleMessage(from, to, message, messageData, discord = false){
+        if (!discord && this.tryInitDiscordChannel() && this.bridgeIrcWhitelist.has(to))
+            this.sendDiscordMessage(`[${from}] ${message}`);
+
         for(const [pluginName, plugin] of this.plugins){
             if('handleMessage' in plugin){
                 plugin.handleMessage(from, to, message);
@@ -79,7 +90,6 @@ class PluginsManager {
             }
             return false;
         }
-        // if(!inQuery && !this.whitelistedChannels.has(to)) return false;
 
         console.log('<' + from + (inQuery ? '' : (':' + to)) + '> ' + message);
         for(const [pluginName, plugin] of this.plugins){
@@ -110,6 +120,14 @@ class PluginsManager {
     }
     sendMessage(channel, message){
         this.client.say(channel, message);
+        if (channel == config.BOT_DISCORD_BRIDGE_IRC_CHANNEL)
+            this.sendDiscordMessage(`[SpinDown] ${message}`);
+    }
+    sendDiscordMessage(message) {
+        if (!this.tryInitDiscordChannel())
+            return;
+        const escaped = message.replace(/\*/g, '\\*').replace(/_/g, '\\_').replace(/~~/g, '\\~~');
+        this.discordChannel.send(escaped);
     }
     sendHighlight(channel, user, message){
         if (channel == user.nick) {

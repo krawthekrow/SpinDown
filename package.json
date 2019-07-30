@@ -4,9 +4,19 @@
   "description": "Yet another IRC bot.",
   "main": "app.js",
   "dependencies": {
+    "@discordjs/uws": "^11.149.1",
+    "bufferutil": "^4.0.1",
+    "discord.js": "^11.5.1",
+    "erlpack": "github:discordapp/erlpack",
     "irc": "github:matrix-org/node-irc",
+    "libsodium-wrappers": "^0.7.5",
     "mkdirp": "^0.5.1",
-    "request": "^2.83.0"
+    "node-opus": "^0.3.2",
+    "opusscript": "0.0.6",
+    "request": "^2.83.0",
+    "sodium": "^3.0.2",
+    "zlib-sync": "^0.1.4",
+    "zucc": "^0.1.2"
   },
   "devDependencies": {},
   "scripts": {
