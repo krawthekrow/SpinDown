@@ -154,58 +154,67 @@ class PowderPlugin {
                 this.env.sendHighlight(returnChannel, msgInfo.sender,
                     'Watchlist cleared!');
             },
-            'pcommentwatch': (returnChannel, argstring, msgInfo) => {
+			'pcommentwatchlist': (returnChannel, argstring, msgInfo) => {
                 const senderNick = msgInfo.sender.nick;
-                const username = argstring;
-                if (username == '') {
+                const query = (argstring == '') ? senderNick : argstring;
+                const watchList = [];
+                for (const user in this.watch.comments) {
+                    if (query in this.watch.comments[user]) {
+                        watchList.push(user);
+                    }
+                }
+                this.env.sendNotice(msgInfo.sender.nick,
+                    (watchList.length > 0) ? watchList.join(', ') :
+                    'Comment watchlist empty!');
+			},
+            'pcommentwatchadd': (returnChannel, argstring, msgInfo) => {
+                if (argstring == '') {
                     this.env.sendHighlight(returnChannel, msgInfo.sender,
-                        'Please provide your TPT username.');
+                        'Please provide a username.');
                     return;
                 }
-                const deleteMode = username == '@stop';
-                if (!deleteMode) {
-                    if (!this.isValidUsername(username)) {
+                const users = argstring.split(' ');
+                const senderNick = msgInfo.sender.nick;
+                for (const user of users) {
+                    if (!this.isValidUsername(user)) {
                         this.env.sendHighlight(
                             returnChannel, msgInfo.sender,
-                            'Invalid username!');
+                            `Invalid username: ${user}`);
                         return;
                     }
-                    if (!(username in this.watch.comments)) {
-                        this.watch.comments[username] = {};
-                    }
-                    if (senderNick in this.watch.comments[username]) {
-                        this.env.sendHighlight(
-                            returnChannel, msgInfo.sender,
-                            'You already have comment watch enabled!');
-                        return;
-                    }
-                    this.watch.comments[username][senderNick] = true;
                 }
-                let commentWatchesFound = 0;
-                for (const oUsername in this.watch.comments) {
-                    if (!deleteMode && username == oUsername) {
-                        continue;
+                for (const user of users) {
+                    if (!(user in this.watch.comments)) {
+                        this.watch.comments[user] = {};
                     }
-                    if (senderNick in this.watch.comments[oUsername]) {
-                        delete this.watch.comments[oUsername][senderNick];
-                        commentWatchesFound++;
-                        if (Object.keys(
-                            this.watch.comments[oUsername]).length == 0) {
-
-                            delete this.watch.comments[oUsername];
-                        }
-                    }
-                }
-                if (deleteMode && commentWatchesFound == 0) {
-                    this.env.sendHighlight(
-                        returnChannel, msgInfo.sender,
-                        'You don\'t have comment watch enabled!');
-                    return;
+                    this.watch.comments[user][senderNick] = true;
                 }
                 this.saveWatch();
                 this.env.sendHighlight(returnChannel, msgInfo.sender,
-                    deleteMode ? 'Comment watch disabled.' :
-                        'Comment watch enabled.');
+                    'Comment watch added!');
+            },
+            'pcommentwatchrem': (returnChannel, argstring, msgInfo) => {
+                const users = argstring.split(' ');
+                const senderNick = msgInfo.sender.nick;
+                let numWatchesRemoved = 0;
+                for (const user of users) {
+                    if ((user in this.watch.comments) &&
+                        (senderNick in this.watch.comments[user])) {
+                        delete this.watch.comments[user][senderNick];
+                        numWatchesRemoved++;
+                    }
+                    else{
+                        this.env.sendHighlight(
+                            returnChannel, msgInfo.sender,
+                            user +
+							' isn\'t not on your comment watchlist!');
+                    }
+                }
+                this.saveWatch();
+                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                    numWatchesRemoved.toString() +
+					' comment watches removed!');
+                return;
             },
         };
         this.taskList = [];
@@ -320,9 +329,11 @@ class PowderPlugin {
                     const watchers = Object.keys(
                         this.watch.comments[currTask.save.Username]);
                     for (const watcher of watchers) {
+                        // assume IRC nick is the same as powder toy
+                        // username for this simple filter
                         if (commentUpdates.every((comment) => {
-                            return comment.Username ==
-                                currTask.save.Username;
+                            return comment.Username.toLowerCase() ==
+                                watcher.toLowerCase();
                             })) {
 
                             continue;
@@ -333,8 +344,8 @@ class PowderPlugin {
                             i >= 0; i--) {
 
                             const comment = commentUpdates[i];
-                            if (comment.Username ==
-                                currTask.save.Username) {
+                            if (comment.Username.toLowerCase() ==
+                                watcher.toLowerCase()) {
 
                                 continue;
                             }

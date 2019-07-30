@@ -88,7 +88,9 @@ HelpPlugin.HELP_CONTENT = {
         'pwatchlist': 'pwatchlist [<nick>] -- See <nick>\'s current watchlist. If <nick> is omitted, see your own watchlist.',
         'pcacheclear': 'pcacheclear [<type>] -- Clear SpinDown\'s save cache. If <type> is provided, clear the cache specified by <type>.',
         'pwatchclear': 'pwatchclear [all] -- Clear your watchlist. If \'all\' is provided, clear everyone\'s watchlist.',
-        'pcommentwatch': 'pcommentwatch <user>|@stop -- Watch for comments on any of your saves. <user> should be your TPT username. If \'@stop\' is provided, stop watching for comments.'
+        'pcommentwatchadd': 'pcommentwatchadd <user> -- Watch for comments on any of <user>\'s saves.',
+        'pcommentwatchrem': 'pcommentwatchrem <users> -- Remove <users> (space-separated usernames) from your comment watchlist.',
+        'pcommentwatchlist': 'pcommentwatchlist [<nick>] -- See <nick>\'s current comment watchlist. If <nick> is omitted, see your own comment watchlist.',
     }
 };
 
