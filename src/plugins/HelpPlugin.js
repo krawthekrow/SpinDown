@@ -1,16 +1,15 @@
 class HelpPlugin {
     constructor(env){
         this.env = env;
-        this.client = this.env.client;
         this.cmds = {
-            'help': (returnChannel, argstring, msgInfo) => {
+            'help': (returnChannel, argstring, sender) => {
                 this.env.sendHighlight(
-                    returnChannel, msgInfo.sender, this.getHelp(argstring)
+                    returnChannel, sender, this.getHelp(argstring)
                 );
             },
-            'list': (returnChannel, argstring, msgInfo) => {
+            'list': (returnChannel, argstring, sender) => {
                 this.env.sendHighlight(
-                    returnChannel, msgInfo.sender, this.getHelp(argstring)
+                    returnChannel, sender, this.getHelp(argstring)
                 );
             }
         };
@@ -35,9 +34,9 @@ class HelpPlugin {
         }
         return 'Command not found!';
     }
-    handleCommand(cmd, argstring, returnChannel, msgInfo){
+    handleCommand(cmd, argstring, returnChannel, sender){
         if(cmd in this.cmds){
-            this.cmds[cmd](returnChannel, argstring, msgInfo);
+            this.cmds[cmd](returnChannel, argstring, sender);
         }
     }
 };

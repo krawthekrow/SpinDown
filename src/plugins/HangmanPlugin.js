@@ -8,162 +8,167 @@ const WORDLIST = fs.readFileSync(WORDLIST_FILENAME).toString().split('\n').filte
 class HangmanPlugin{
     constructor(env){
         this.env = env;
-        this.client = this.env.client;
+        this.ircCli = this.env.ircCli;
         this.ongoingGames = {};
         this.cmds = {
-            'hmstart': (returnChannel, argstring, msgInfo) => {
+            'hmstart': (returnChannel, argstring, sender) => {
                 let targetChannel = returnChannel;
                 let solution;
                 const splitMsg = argstring.split(' ');
-                if(msgInfo.inQuery){
-                    if(splitMsg.length != 2){
+                if (returnChannel.isQuery) {
+                    if (returnChannel.type != Channel.TYPE_IRC) {
+                        this.env.sendHighlight(
+                            returnChannel,
+                            sender,
+                            `Starting a game from query is only enabled on IRC.`
+                        );
+                        return;
+                    }
+                    if (splitMsg.length != 2) {
                         this.env.printHelp(
-                            returnChannel, 'hmstart', msgInfo);
+                            returnChannel, 'hmstart', sender
+                        );
                         return;
                     }
-                    targetChannel = splitMsg[0];
+                    targetChannel = new Channel(
+                        Channel.TYPE_IRC, this.ircCli, splitMsg[0]
+                    );
                     solution = splitMsg[1];
-                    if(!(targetChannel in this.client.chans)){
+                    if (!(targetChannel.val in this.ircCli.chans)) {
                         this.env.sendMessage(
                             returnChannel,
-                            'I\'m not in that channel.');
+                            'I\'m not in that channel.'
+                        );
                         return;
                     }
-                    if(!(msgInfo.sender.nick in
-                        this.client.chans[targetChannel].users)){
+                    if (!(sender.nick in
+                            this.ircCli.chans[targetChannel.val].users)) {
                         this.env.sendMessage(
                             returnChannel,
-                            'You\'re not in that channel.');
+                            'You\'re not in that channel.'
+                        );
                         return;
                     }
                 }
-                else{
+                else {
                     targetChannel = returnChannel;
                     solution = WORDLIST[parseInt(
                         Math.floor(Math.random() * WORDLIST.length))];
                 }
-                if(targetChannel in this.ongoingGames){
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
+                if (targetChannel.id in this.ongoingGames) {
+                    this.env.sendHighlight(returnChannel, sender,
                         'Game already in progress in this channel.');
                     return;
                 }
                 solution = solution.toLowerCase();
-                const currGame = {
+                const game = {
                     solution: solution,
-                    host: msgInfo.sender,
+                    host: sender.id,
                     guesses: new Set(),
                     lives: 5
                 };
-                this.ongoingGames[targetChannel] = currGame;
+                this.ongoingGames[targetChannel.id] = game;
                 this.env.sendMessage(targetChannel,
-                    currGame.host.nick + ' has started a hangman game!');
+                    game.host.nick + ' has started a hangman game!');
                 this.showHints(targetChannel);
             },
-            'hmstop': (returnChannel, argstring, msgInfo) => {
-                if(msgInfo.inQuery){
-                    this.env.sendMessage(returnChannel,
-                        'Please do that in channel.');
+            'hmstop': (returnChannel, argstring, sender) => {
+                const game = this.requestGame(returnChannel, sender);
+                if (game == null)
                     return;
-                }
-                if(!(returnChannel in this.ongoingGames)){
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
-                        'No game in progress right now!');
-                    return;
-                }
-                delete this.ongoingGames[returnChannel];
-                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                delete this.ongoingGames[returnChannel.id];
+                this.env.sendHighlight(returnChannel, sender,
                     'Game stopped!');
             },
-            'hmshow': (returnChannel, argstring, msgInfo) => {
-                if(msgInfo.inQuery){
-                    this.env.sendMessage(returnChannel,
-                        'Please do that in channel.');
+            'hmshow': (returnChannel, argstring, sender) => {
+                const game = this.requestGame(returnChannel, sender);
+                if (game == null)
                     return;
-                }
-                if(!(returnChannel in this.ongoingGames)){
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
-                        'No game in progress right now!');
-                    return;
-                }
                 this.showHints(returnChannel);
             },
             'hmguess': (returnChannel, argstring, msgInfo) => {
-                if(msgInfo.inQuery){
-                    this.env.sendMessage(returnChannel,
-                        'Please do that in channel.');
+                const game = this.requestGame(returnChannel, sender);
+                if (game == null)
                     return;
-                }
-                if(!(returnChannel in this.ongoingGames)){
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
-                        'No game in progress right now!');
-                    return;
-                }
-                if(argstring.length == 0){
+                if (argstring.length == 0) {
                     this.env.printHelp(
-                        returnChannel, 'hmguess', msgInfo);
+                        returnChannel, 'hmguess', sender
+                    );
                     return;
                 }
-                if(argstring.length != 1){
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
+                if (/^[a-zA-Z]$/.test(argstring)) {
+                    this.env.sendHighlight(returnChannel, sender,
                         'Please guess a single character >:|');
                     return;
                 }
                 const guess = argstring.toLowerCase();
-                const currGame = this.ongoingGames[returnChannel];
-                if(currGame.guesses.has(guess)){
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
+                if (game.guesses.has(guess)) {
+                    this.env.sendHighlight(returnChannel, sender,
                         'You already guessed that before!');
                     return;
                 }
-                if(currGame.solution.indexOf(guess) == -1){
-                    currGame.lives--;
+                if (game.solution.indexOf(guess) == -1) {
+                    game.lives--;
                     this.env.sendMessage(returnChannel,
                         'The solution does not contain \'' + guess + '\'.');
-                    if(currGame.lives == 0){
+                    if(game.lives == 0){
                         this.env.sendMessage(returnChannel,
                             'You lose! The solution was \'' +
-                            currGame.solution + '\'.');
-                        delete this.ongoingGames[returnChannel];
+                            game.solution + '\'.');
+                        delete this.ongoingGames[returnChannel.id];
                         return;
                     }
                 }
-                currGame.guesses.add(guess);
+                game.guesses.add(guess);
                 this.showHints(returnChannel);
                 let isGameFinished = true;
-                for(let i = 0; i < currGame.solution.length; i++){
-                    if(!currGame.guesses.has(currGame.solution[i])){
+                for (let i = 0; i < game.solution.length; i++) {
+                    if (!game.guesses.has(game.solution[i])) {
                         isGameFinished = false;
                         break;
                     }
                 }
-                if(isGameFinished){
+                if (isGameFinished) {
                     this.env.sendMessage(returnChannel, 'You won!');
-                    delete this.ongoingGames[returnChannel];
+                    delete this.ongoingGames[returnChannel.id];
                     return;
                 }
             }
         };
     }
-    handleCommand(cmd, argstring, returnChannel, msgInfo){
+    requestGame(chan, sender) {
+        if (chan.isQuery) {
+            this.env.sendMessage(chan,
+                'Please do that in channel.');
+            return null;
+        }
+        if (!(chan.id in this.ongoingGames)) {
+            this.env.sendHighlight(chan, sender,
+                'No game in progress right now!');
+            return null;
+        }
+        return this.ongoingGames[chan.id];
+    }
+    handleCommand(cmd, argstring, returnChannel, sender){
         if(cmd in this.cmds){
-            this.cmds[cmd](returnChannel, argstring, msgInfo);
+            this.cmds[cmd](returnChannel, argstring, sender);
         }
     }
     showHints(targetChannel){
-        const currGame = this.ongoingGames[targetChannel];
-        const solution = currGame.solution;
+        const game = this.ongoingGames[targetChannel];
+        const solution = game.solution;
         let hintString = new Array(solution.length).fill('_');
         for(let i = 0; i < solution.length; i++){
-            if(currGame.guesses.has(solution[i])){
+            if(game.guesses.has(solution[i])){
                 hintString[i] = solution[i];
             }
         }
         this.env.sendMessage(targetChannel,
             'Hint: ' + hintString.join(' '));
         this.env.sendMessage(targetChannel,
-            'Lives: ' + currGame.lives.toString() +
+            'Lives: ' + game.lives.toString() +
             '   Guesses: ' +
-            Array.from(currGame.guesses).sort().join(', '));
+            Array.from(game.guesses).sort().join(', '));
     }
 };
 

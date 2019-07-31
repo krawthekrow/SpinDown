@@ -3,7 +3,9 @@ const path = require('path');
 const mkdirp = require('mkdirp');
 const request = require('request');
 
-const config = require('../../config.js').PLUGINS_CONFIG.POWDER;
+const config = require('../../config.js').PLUGINS.POWDER;
+
+const Channel = require('../Channel.js');
 
 const UPDATE_MIN_INTERVAL = config.UPDATE_MIN_INTERVAL;
 
@@ -36,22 +38,21 @@ const WATCH = JSON.parse(fs.readFileSync(WATCH_FILENAME).toString());
 class PowderPlugin {
     constructor(env){
         this.env = env;
-        this.client = this.env.client;
 
         this.cache = CACHE;
         this.watch = WATCH;
 
         this.cmds = {
-            'puser': (returnChannel, argstring, msgInfo) => {
+            'puser': (returnChannel, argstring, sender) => {
                 // Testing command, don't use
                 const user = argstring;
                 if (user == '') {
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
+                    this.env.sendHighlight(returnChannel, sender,
                         'Please provide a username.');
                     return;
                 }
                 if (!this.isValidUsername(user)) {
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
+                    this.env.sendHighlight(returnChannel, sender,
                         'Invalid username!');
                     return;
                 }
@@ -61,18 +62,18 @@ class PowderPlugin {
                     }
                 }, 4);
             },
-            'pwatchadd': (returnChannel, argstring, msgInfo) => {
+            'pwatchadd': (returnChannel, argstring, sender) => {
                 if (argstring == '') {
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
+                    this.env.sendHighlight(returnChannel, sender,
                         'Please provide a user to watch.');
                     return;
                 }
                 const users = argstring.split(' ');
-                const senderNick = msgInfo.sender.nick;
+                const senderNick = sender.nick;
                 for (const user of users) {
                     if (!this.isValidUsername(user)) {
                         this.env.sendHighlight(
-                            returnChannel, msgInfo.sender,
+                            returnChannel, sender,
                             `Invalid username: ${user}`);
                         return;
                     }
@@ -84,12 +85,12 @@ class PowderPlugin {
                     this.watch.users[user][senderNick] = true;
                 }
                 this.saveWatch();
-                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                this.env.sendHighlight(returnChannel, sender,
                     'Watch added!');
             },
-            'pwatchrem': (returnChannel, argstring, msgInfo) => {
+            'pwatchrem': (returnChannel, argstring, sender) => {
                 const users = argstring.split(' ');
-                const senderNick = msgInfo.sender.nick;
+                const senderNick = sender.nick;
                 let numWatchesRemoved = 0;
                 for (const user of users) {
                     if ((user in this.watch.users) &&
@@ -99,17 +100,17 @@ class PowderPlugin {
                     }
                     else{
                         this.env.sendHighlight(
-                            returnChannel, msgInfo.sender,
+                            returnChannel, sender,
                             user + ' isn\'t not on your watchlist!');
                     }
                 }
                 this.saveWatch();
-                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                this.env.sendHighlight(returnChannel, sender,
                     numWatchesRemoved.toString() + ' watches removed!');
                 return;
             },
-            'pwatchlist': (returnChannel, argstring, msgInfo) => {
-                const senderNick = msgInfo.sender.nick;
+            'pwatchlist': (returnChannel, argstring, sender) => {
+                const senderNick = sender.nick;
                 const query = (argstring == '') ? senderNick : argstring;
                 const watchList = [];
                 for (const user in this.watch.users) {
@@ -117,12 +118,12 @@ class PowderPlugin {
                         watchList.push(user);
                     }
                 }
-                this.env.sendNotice(msgInfo.sender.nick,
+                this.env.sendNotice(sender.nick,
                     (watchList.length > 0) ? watchList.join(', ') :
                     'Watchlist empty!');
             },
-            'pcacheclear': (returnChannel, argstring, msgInfo) => {
-                if(this.env.permissions.isAdmin(msgInfo.sender)){
+            'pcacheclear': (returnChannel, argstring, sender) => {
+                if(this.env.permissions.isAdmin(sender)){
                     if (argstring == 'subframe') {
                         this.cache.subframe = {};
                     }
@@ -130,32 +131,32 @@ class PowderPlugin {
                         this.cache = INIT_CACHE_SKELETON;
                     }
                     this.saveCache();
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
+                    this.env.sendHighlight(returnChannel, sender,
                         'Cache cleared!');
                 }
             },
-            'pwatchclear': (returnChannel, argstring, msgInfo) => {
+            'pwatchclear': (returnChannel, argstring, sender) => {
                 if (argstring == 'all') {
-                    if(this.env.permissions.isAdmin(msgInfo.sender)){
+                    if(this.env.permissions.isAdmin(sender)){
                         this.watch = INIT_WATCH_SKELETON;
                         this.saveWatch();
                         this.env.sendHighlight(
-                            returnChannel, msgInfo.sender,
+                            returnChannel, sender,
                             'All watchlists cleared!');
                     }
                     return;
                 }
-                const senderNick = msgInfo.sender.nick;
+                const senderNick = sender.nick;
                 for (const user in this.watch.users) {
                     if (senderNick in this.watch.users[user]) {
                         delete this.watch.users[user][senderNick];
                     }
                 }
-                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                this.env.sendHighlight(returnChannel, sender,
                     'Watchlist cleared!');
             },
-			'pcommentwatchlist': (returnChannel, argstring, msgInfo) => {
-                const senderNick = msgInfo.sender.nick;
+			'pcommentwatchlist': (returnChannel, argstring, sender) => {
+                const senderNick = sender.nick;
                 const query = (argstring == '') ? senderNick : argstring;
                 const watchList = [];
                 for (const user in this.watch.comments) {
@@ -163,22 +164,22 @@ class PowderPlugin {
                         watchList.push(user);
                     }
                 }
-                this.env.sendNotice(msgInfo.sender.nick,
+                this.env.sendNotice(sender.nick,
                     (watchList.length > 0) ? watchList.join(', ') :
                     'Comment watchlist empty!');
 			},
-            'pcommentwatchadd': (returnChannel, argstring, msgInfo) => {
+            'pcommentwatchadd': (returnChannel, argstring, sender) => {
                 if (argstring == '') {
-                    this.env.sendHighlight(returnChannel, msgInfo.sender,
+                    this.env.sendHighlight(returnChannel, sender,
                         'Please provide a username.');
                     return;
                 }
                 const users = argstring.split(' ');
-                const senderNick = msgInfo.sender.nick;
+                const senderNick = sender.nick;
                 for (const user of users) {
                     if (!this.isValidUsername(user)) {
                         this.env.sendHighlight(
-                            returnChannel, msgInfo.sender,
+                            returnChannel, sender,
                             `Invalid username: ${user}`);
                         return;
                     }
@@ -190,12 +191,12 @@ class PowderPlugin {
                     this.watch.comments[user][senderNick] = true;
                 }
                 this.saveWatch();
-                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                this.env.sendHighlight(returnChannel, sender,
                     'Comment watch added!');
             },
-            'pcommentwatchrem': (returnChannel, argstring, msgInfo) => {
+            'pcommentwatchrem': (returnChannel, argstring, sender) => {
                 const users = argstring.split(' ');
-                const senderNick = msgInfo.sender.nick;
+                const senderNick = sender.nick;
                 let numWatchesRemoved = 0;
                 for (const user of users) {
                     if ((user in this.watch.comments) &&
@@ -205,13 +206,13 @@ class PowderPlugin {
                     }
                     else{
                         this.env.sendHighlight(
-                            returnChannel, msgInfo.sender,
+                            returnChannel, sender,
                             user +
 							' isn\'t not on your comment watchlist!');
                     }
                 }
                 this.saveWatch();
-                this.env.sendHighlight(returnChannel, msgInfo.sender,
+                this.env.sendHighlight(returnChannel, sender,
                     numWatchesRemoved.toString() +
 					' comment watches removed!');
                 return;
@@ -281,7 +282,8 @@ class PowderPlugin {
         case 'fp':
             this.getFpUpdates((fpUpdates) => {
                 for (const save of fpUpdates) {
-                    this.env.sendMessage('#powder-subframe',
+                    this.env.sendMessage(
+                        new Channel(Channel.TYPE_IRC, '#powder-subframe'),
                         `Subframe FP Update; http://tpt.io/~${save.ID}`);
                 }
                 setImmediate(() => {
@@ -338,7 +340,8 @@ class PowderPlugin {
 
                             continue;
                         }
-                        this.env.sendMessage(watcher,
+                        this.env.sendMessage(
+                            new Channel(Channel.TYPE_IRC, watcher),
                             `New comments for '${currTask.save.Name}'; http://tpt.io/~${currTask.save.ID}`);
                         for (let i = commentUpdates.length - 1;
                             i >= 0; i--) {
@@ -349,7 +352,8 @@ class PowderPlugin {
 
                                 continue;
                             }
-                            this.env.sendMessage(watcher,
+                            this.env.sendMessage(
+                                new Channel(Channel.TYPE_IRC, watcher),
                                 `<${comment.Username}> ${comment.Text}`);
                         }
                     }
@@ -536,9 +540,9 @@ class PowderPlugin {
     isValidUsername(user){
         return /^[a-zA-Z0-9-_]+$/i.test(user);
     }
-    handleCommand(cmd, argstring, returnChannel, msgInfo){
+    handleCommand(cmd, argstring, returnChannel, sender){
         if(cmd in this.cmds){
-            this.cmds[cmd](returnChannel, argstring, msgInfo);
+            this.cmds[cmd](returnChannel, argstring, sender);
         }
     }
 };

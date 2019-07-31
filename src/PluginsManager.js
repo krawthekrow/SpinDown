@@ -1,4 +1,6 @@
 const config = require('../config.js');
+const Channel = require('./Channel.js');
+
 const PermissionsManager = require('./PermissionsManager.js');
 
 const PLUGIN_NAMES = new Map([
@@ -8,19 +10,16 @@ const PLUGIN_NAMES = new Map([
     ['general', 'GeneralPlugin'],
     ['hangman', 'HangmanPlugin'],
     ['powder', 'PowderPlugin'],
+    ['bridge', 'BridgePlugin'],
     ['help', 'HelpPlugin']
 ]);
 
 const ATTACK_REGEX = /^.attack\s*SpinDown\s*$/
 
 class PluginsManager {
-    constructor(client, discordCli){
-        this.client = client;
+    constructor(ircCli, discordCli){
+        this.ircCli = ircCli;
         this.discordCli = discordCli;
-
-        let bridgeIrcWhitelistArr = config.BOT_DISCORD_BRIDGE_IRC_WHITELIST;
-        bridgeIrcWhitelistArr.push(config.BOT_DISCORD_BRIDGE_IRC_CHANNEL);
-        this.bridgeIrcWhitelist = new Set(bridgeIrcWhitelistArr);
 
         this.commandPrefix = config.COMMAND_PREFIX;
 
@@ -31,19 +30,30 @@ class PluginsManager {
         this.plugins = new Map();
         this.reloadPlugins();
     }
+    get user(chanType) {
+        switch (chanType) {
+        case Channel.TYPE_IRC:
+            return new User(
+                User.TYPE_IRC,
+                new User.IrcUserData(
+                    config.BOT_NICK,
+                    config.BOT_USERNAME,
+                    config.BOT_HOSTMASK
+                )
+            );
+        case Channel.TYPE_DISCORD:
+            return this.discordCli.user;
+            break;
+        default:
+            throw new Error('unrecognized channel type');
+        }
+    }
     dispose(){
         for(const [pluginName, plugin] of this.plugins){
             if('dispose' in plugin){
                 plugin.dispose();
             }
         }
-    }
-    tryInitDiscordChannel() {
-        if (this.discordChannel != null)
-            return true;
-        this.discordChannel = this.discordCli.channels.get(
-            config.BOT_DISCORD_BRIDGE_DISCORD_CHANNEL);
-        return this.discordChannel != null;
     }
     reloadPlugins(){
         for(const [name, filename] of PLUGIN_NAMES){
@@ -59,42 +69,59 @@ class PluginsManager {
             }
         }
     }
-    handleMessage(from, to, message, messageData, discord = false){
-        if (!discord && this.tryInitDiscordChannel() && this.bridgeIrcWhitelist.has(to))
-            this.sendDiscordMessage(`[${from}] ${message}`);
-
-        for(const [pluginName, plugin] of this.plugins){
-            if('handleMessage' in plugin){
-                plugin.handleMessage(from, to, message);
+    handleIrcMessage(from, to, message, messageData) {
+        const userVal = new User.IrcUserData(
+            messageData.nick,
+            messageData.user,
+            messageData.host
+        );
+        this.handleMessage(
+            new User(User.TYPE_IRC, userVal),
+            new Channel(
+                Channel.TYPE_IRC,
+                this.ircCli,
+                to
+            ),
+            message
+        );
+    }
+    handleDiscordMessage(msg) {
+        this.handleMessage(
+            new User(User.TYPE_DISCORD, msg.author),
+            new Channel(
+                Channel.TYPE_DISCORD,
+                this.discordCli,
+                msg.channel
+            ),
+            msg.content
+        );
+    }
+    handleMessage(user, chan, msg) {
+        for (const [pluginName, plugin] of this.plugins) {
+            if ('handleMessage' in plugin) {
+                plugin.handleMessage(user, chan, msg);
             }
         }
+        let returnChannel = chan;
+        if (chan.type == Channel.TYPE_IRC && chan.isQuery)
+            returnChannel = new Channel(Channel.TYPE_IRC, user.nick);
+        const isPrefixed = msg.startsWith(this.commandPrefix);
 
-        const inQuery = to == this.client.nick;
-        const returnChannel = inQuery ? from : to;
-        const isPrefixed = message.startsWith(this.commandPrefix);
-
-        const msgInfo = {
-            sender: {
-                nick: messageData.nick,
-                username: messageData.user,
-                hostmask: messageData.host
-            },
-            inQuery: inQuery
-        };
-        if(isPrefixed) message = message.substr(this.commandPrefix.length);
-        if(!isPrefixed && !inQuery) {
-            if(message.match(ATTACK_REGEX)) {
+        if (isPrefixed) msg = msg.substr(this.commandPrefix.length);
+        if (!isPrefixed && !chan.isQuery) {
+            if (msg.match(ATTACK_REGEX)) {
                 this.sendMessage(
-                    returnChannel, '^attack ' + msgInfo.sender.nick);
+                    returnChannel, '^attack ' + sender.nick
+                );
                 return true;
             }
             return false;
         }
 
-        console.log('<' + from + (inQuery ? '' : (':' + to)) + '> ' + message);
+        console.log(`<${user.name}${chan.isQuery ? '' : `:${chan.name}`}> ${msg}`);
         for(const [pluginName, plugin] of this.plugins){
-            const [cmd, argstring] = this.extractCmd(message);
-            plugin.handleCommand(cmd, argstring, returnChannel, msgInfo);
+            const [cmd, argstring] = this.extractCmd(msg);
+            plugin.handleCommand(cmd, argstring, returnChannel, user);
         }
         return true;
     }
@@ -107,34 +134,70 @@ class PluginsManager {
         }
         return [cmd, argstring];
     }
-    printHelp(returnChannel, query, msgInfo){
-        this.sendHighlight(returnChannel, msgInfo.sender,
+    printHelp(returnChannel, query, sender){
+        this.sendHighlight(returnChannel, sender,
             this.plugins.get('help').getHelp(query)
         );
     }
-    sendAction(channel, message){
-        this.client.action(channel, message);
-    }
-    sendNotice(channel, message){
-        this.client.notice(channel, message);
-    }
-    sendMessage(channel, message){
-        this.client.say(channel, message);
-        if (channel == config.BOT_DISCORD_BRIDGE_IRC_CHANNEL)
-            this.sendDiscordMessage(`[SpinDown] ${message}`);
-    }
-    sendDiscordMessage(message) {
-        if (!this.tryInitDiscordChannel())
-            return;
-        const escaped = message.replace(/\*/g, '\\*').replace(/_/g, '\\_').replace(/~~/g, '\\~~');
-        this.discordChannel.send(escaped);
-    }
-    sendHighlight(channel, user, message){
-        if (channel == user.nick) {
-            this.sendMessage(channel, message);
+    sendAction(chan, msg){
+        switch (chan.type) {
+        case Channel.TYPE_IRC:
+            this.ircCli.action(chan, msg);
+            break;
+        case Channel.TYPE_DISCORD:
+            // TODO: this
+            break;
+        default:
+            throw new Error('unrecognized channel type');
         }
-        else {
-            this.sendMessage(channel, user.nick + ': ' + message);
+    }
+    sendNotice(chan, msg){
+        switch (chan.type) {
+        case Channel.TYPE_IRC:
+            this.ircCli.notice(chan, msg);
+            break;
+        case Channel.TYPE_DISCORD:
+            // TODO: this
+            break;
+        default:
+            throw new Error('unrecognized channel type');
+        }
+    }
+    sendMessage(chan, msg){
+        this.sendMessageNoBridge(chan, msg);
+        this.plugins.get('bridge').handleMessage(this.user, chan, msg);
+    }
+    sendMessageNoBridge(chan, msg) {
+        switch (chan.type) {
+        case Channel.TYPE_IRC:
+            this.ircCli.say(chan, msg);
+            break;
+        case Channel.TYPE_DISCORD:
+            chan.send(msg);
+            break;
+        default:
+            throw new Error('unrecognized channel type');
+        }
+    }
+    sendHighlight(chan, user, msg){
+        if (chan.isQuery(user)) {
+            this.sendMessage(chan, msg);
+            return;
+        }
+
+        this.sendMessage(chan, `${user.highlight} ${msg}`);
+    }
+    kick(chan, user) {
+        switch (chan.type) {
+        case Channel.TYPE_IRC:
+            this.ircCli.send('kick', chan.val, sender.nick, 'YOU die!');
+            break;
+        case Channel.TYPE_DISCORD:
+            // TODO: this
+            this.sendMessage(chan, `SpinDown would like to kick ${sender.nick} but doesn't know how yet :(`);
+            break;
+        default:
+            throw new Error('unrecognized channel type');
         }
     }
 };

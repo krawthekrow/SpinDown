@@ -1,19 +1,21 @@
 class ReloadPlugin {
     constructor(env){
         this.env = env;
-        this.client = this.env.client;
         this.cmds = {
-            'reload': (returnChannel, argstring, msgInfo) => {
+            'reload': (returnChannel, argstring, sender) => {
                 this.env.reloadSelf();
-                this.env.sendHighlight(returnChannel, msgInfo.sender,
-                    'Reloaded!');
+                this.env.sendHighlight(
+                    returnChannel,
+                    sender,
+                    'Reloaded!'
+                );
             }
         };
     }
-    handleCommand(cmd, argstring, returnChannel, msgInfo){
-        if(this.env.permissions.isAdmin(msgInfo.sender)){
+    handleCommand(cmd, argstring, returnChannel, sender){
+        if(this.env.permissions.isAdmin(sender)){
             if(cmd in this.cmds){
-                this.cmds[cmd](returnChannel, argstring, msgInfo);
+                this.cmds[cmd](returnChannel, argstring, sender);
             }
         }
     }
