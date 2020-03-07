@@ -1,3 +1,5 @@
+const User = require('./User.js');
+
 class IrcChannelData {
 	constructor(name, client) {
 		this.name = name;
@@ -44,6 +46,8 @@ class Channel {
 		case Channel.TYPE_IRC:
 			return this.val.name;
 		case Channel.TYPE_DISCORD:
+			if ('recipient' in this.val)
+				return this.val.recipient.username;
 			return `#${this.val.name}`;
 		default:
 			throw new Error('unrecognized channel type');
@@ -52,11 +56,13 @@ class Channel {
 	get fullName() {
 		switch (this.type) {
 		case Channel.TYPE_IRC:
-			return this.name;
+			return `irc:${this.name}`;
 		case Channel.TYPE_DISCORD:
 			if ('guild' in this.val)
-				return `${this.val.guild.name}${this.name}`;
-			return this.name;
+				return `discord:${this.val.guild.name}#${this.val.name}`;
+			if ('recipient' in this.val)
+				return `discord-dm:${this.val.recipient.tag}`;
+			return `discord:${this.name}`;
 		default:
 			throw new Error('unrecognized channel type');
 		}
@@ -69,6 +75,25 @@ class Channel {
 			return `discord:${this.val.id}`;
 		default:
 			throw new Error('unrecognized channel type');
+		}
+	}
+	static getDmChan(ircCli, discordCli, user) {
+		switch (user.type) {
+		case User.TYPE_IRC:
+			return new Channel(
+				Channel.TYPE_IRC,
+				new Channel.IrcChannelData(
+					user.val.nick,
+					ircCli
+				)
+			);
+		case User.TYPE_DISCORD:
+			return new Channel(
+				Channel.TYPE_DISCORD,
+				user.val.dmChannel
+			);
+		default:
+			throw new Error('unrecognized user type');
 		}
 	}
 	static getReplyChan(chan, user) {
@@ -85,17 +110,10 @@ class Channel {
 	static equal(chan1, chan2) {
 		if (chan1.type != chan2.type)
 			return false;
-		switch (chan1.type) {
-		case Channel.TYPE_IRC:
-			return chan1.name == chan2.name;
-		case Channel.TYPE_DISCORD:
-			return chan1.id == chan2.id;
-		default:
-			throw new Error('unrecognized channel type');
-		}
+		return chan1.id == chan2.id;
 	}
 	static fromString(str, ircCli, discordCli) {
-		let chan = Channel.findByPreciseFullName(ircCli, discordCli, str);
+		const chan = Channel.findByPreciseFullName(ircCli, discordCli, str);
 		if (chan != null)
 			return chan;
 
@@ -122,6 +140,19 @@ class Channel {
 			);
 		}
 
+		match = Channel.REGEX_DISCORD_DM.exec(name);
+		if (match != null) {
+			if (match.length != 2)
+				throw new Error('match should have length 2');
+			const user = discordCli.users.find(user => user.tag == match[1]);
+			if (user == null)
+				return null;
+			return new Channel(
+				Channel.TYPE_DISCORD,
+				user.dmChannel
+			);
+		}
+
 		return null;
 	}
 	static findByFullName(type, ircCli, discordCli, name) {
@@ -131,7 +162,9 @@ class Channel {
 
 		switch (type) {
 		case Channel.TYPE_IRC:
-			if (!(name in ircCli.chans))
+			if (name.length < 1)
+				throw new Error('zero-length channel name');
+			if (name[0] == '#' && !(name in ircCli.chans))
 				return null;
 			return new Channel(
 				Channel.TYPE_IRC,
@@ -212,6 +245,7 @@ class Channel {
 
 Channel.REGEX_IRC = /^irc:(.*)$/;
 Channel.REGEX_DISCORD = /^discord:(.*)$/;
+Channel.REGEX_DISCORD_DM = /^discord-dm:(.*)$/;
 
 Channel.REGEX_FIND_DISCORD = /^([^#]*)#(.*)$/;
 

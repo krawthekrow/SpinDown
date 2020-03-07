@@ -38,6 +38,8 @@ if(!fs.existsSync(WATCH_FILENAME)){
 }
 const WATCH = JSON.parse(fs.readFileSync(WATCH_FILENAME).toString());
 
+const LEGACY = false;
+
 class PowderPlugin {
 	constructor(env){
 		this.env = env;
@@ -72,34 +74,37 @@ class PowderPlugin {
 			},
 			'pwatchadd': (returnChannel, argstring, sender) => {
 				if (argstring == '') {
-					this.env.sendHighlight(returnChannel, sender,
-						'Please provide a user or save ID to watch.');
+					this.env.printHelp(returnChannel, 'pwatchadd', sender);
 					return;
 				}
 
 				const watchlist = this.parseWatchlist(
 					argstring, returnChannel, sender
 				);
-				const senderId = sender.id;
+				const watcherChan = Channel.getDmChan(
+					this.env.ircCli,
+					this.env.discordCli,
+					sender
+				).fullName;
 				const usersPlaceholders = watchlist.users.map(
 					watchee => '(?, ?)'
 				).join(',');
 				const usersValues = [].concat(...watchlist.users.map(
-					watchee => [senderId, watchee]
+					watchee => [watcherChan, watchee]
 				));
 				const usersPlusPlaceholders = watchlist.usersPlus.map(
 					watchee => '(?, ?)'
 				).join(',');
 				const usersPlusValues = [].concat(
 					...watchlist.usersPlus.map(
-						watchee => [senderId, watchee]
+						watchee => [watcherChan, watchee]
 					)
 				);
 				const savesPlaceholders = watchlist.saves.map(
 					watchee => '(?, ?)'
 				).join(',');
 				const savesValues = [].concat(...watchlist.saves.map(
-					watchee => [senderId, watchee]
+					watchee => [watcherChan, watchee]
 				));
 
 				let numQueriesNeeded = 0;
@@ -126,52 +131,58 @@ class PowderPlugin {
 					this.sendWatchlist(sender);
 				};
 
-				this.db.run(
-					`INSERT OR IGNORE INTO user_watches(watcher, watchee) VALUES ${usersPlaceholders}`,
-					usersValues,
-					onInsert
-				);
-				this.db.run(
-					`INSERT OR IGNORE INTO user_comment_watches(watcher, watchee) VALUES ${usersPlusPlaceholders}`,
-					usersPlusValues,
-					onInsert
-				);
-				this.db.run(
-					`INSERT OR IGNORE INTO comment_watches(watcher, watchee) VALUES ${savesPlaceholders}`,
-					savesValues,
-					onInsert
-				);
+				if (watchlist.users.length != 0)
+					this.db.run(
+						`INSERT OR IGNORE INTO user_watches(watcher, watchee) VALUES ${usersPlaceholders}`,
+						usersValues,
+						onInsert
+					);
+				if (watchlist.usersPlus.length != 0)
+					this.db.run(
+						`INSERT OR IGNORE INTO user_comment_watches(watcher, watchee) VALUES ${usersPlusPlaceholders}`,
+						usersPlusValues,
+						onInsert
+					);
+				if (watchlist.saves.length != 0)
+					this.db.run(
+						`INSERT OR IGNORE INTO comment_watches(watcher, watchee) VALUES ${savesPlaceholders}`,
+						savesValues,
+						onInsert
+					);
 			},
 			'pwatchrem': (returnChannel, argstring, sender) => {
 				if (argstring == '') {
-					this.env.sendHighlight(returnChannel, sender,
-						'Please provide a user or save ID to remove from your watchlist.');
+					this.env.printHelp(returnChannel, 'pwatchrem', sender);
 					return;
 				}
 
 				const watchlist = this.parseWatchlist(
 					argstring, returnChannel, sender
 				);
-				const senderId = sender.id;
+				const watcherChan = Channel.getDmChan(
+					this.env.ircCli,
+					this.env.discordCli,
+					sender
+				).fullName;
 				const usersPlaceholders = watchlist.users.map(
 					watchee => '(watcher = ? AND watchee = ?)'
 				).join(' OR ');
 				const usersValues = [].concat(...watchlist.users.map(
-					watchee => [senderId, watchee]
+					watchee => [watcherChan, watchee]
 				));
 				const usersPlusPlaceholders = watchlist.usersPlus.map(
 					watchee => '(watcher = ? AND watchee = ?)'
 				).join(' OR ');
 				const usersPlusValues = [].concat(
 					...watchlist.usersPlus.map(
-						watchee => [senderId, watchee]
+						watchee => [watcherChan, watchee]
 					)
 				);
 				const savesPlaceholders = watchlist.saves.map(
 					watchee => '(watcher = ? AND watchee = ?)'
 				).join(' OR ');
 				const savesValues = [].concat(...watchlist.saves.map(
-					watchee => [senderId, watchee]
+					watchee => [watcherChan, watchee]
 				));
 
 				let numQueriesNeeded = 0;
@@ -203,33 +214,40 @@ class PowderPlugin {
 					onDelete(this.changes);
 				};
 
-				this.db.run(
-					`DELETE FROM user_watches WHERE ${usersPlaceholders}`,
-					usersValues,
-					onDeleteOuter
-				);
-				this.db.run(
-					`DELETE FROM user_comment_watches WHERE ${usersPlusPlaceholders}`,
-					usersPlusValues,
-					onDeleteOuter
-				);
-				this.db.run(
-					`DELETE FROM comment_watches WHERE ${savesPlaceholders}`,
-					savesValues,
-					onDeleteOuter
-				);
+				if (watchlist.users.length != 0)
+					this.db.run(
+						`DELETE FROM user_watches WHERE ${usersPlaceholders}`,
+						usersValues,
+						onDeleteOuter
+					);
+				if (watchlist.usersPlus.length != 0)
+					this.db.run(
+						`DELETE FROM user_comment_watches WHERE ${usersPlusPlaceholders}`,
+						usersPlusValues,
+						onDeleteOuter
+					);
+				if (watchlist.saves.length != 0)
+					this.db.run(
+						`DELETE FROM comment_watches WHERE ${savesPlaceholders}`,
+						savesValues,
+						onDeleteOuter
+					);
 			},
 			'pwatchlist': (returnChannel, argstring, sender) => {
-				const query = (argstring == '') ? sender.id : argstring;
-				this.sendWatchlist(sender, query);
+				// const query = (argstring == '') ? sender.id : argstring;
+				this.sendWatchlist(sender);
 			},
 			'pcacheclear': (returnChannel, argstring, sender) => {
-				if(this.env.permissions.isAdmin(sender)){
+				if (this.env.permissions.isAdmin(sender)){
 					if (argstring == 'subframe') {
 						this.cache.subframe = {};
+						this.db.run(`DELETE FROM fp_cache`);
 					}
 					else {
 						this.cache = INIT_CACHE_SKELETON;
+						this.db.run(`DELETE FROM fp_cache`);
+						this.db.run(`DELETE FROM user_cache`);
+						this.db.run(`DELETE FROM save_cache`);
 					}
 					this.saveCache();
 					this.env.sendHighlight(returnChannel, sender,
@@ -271,69 +289,69 @@ class PowderPlugin {
 			// 	this.env.sendHighlight(returnChannel, sender,
 			// 		'Watchlist cleared!');
 			// },
-			'pcommentwatchlist': (returnChannel, argstring, sender) => {
-				const senderId = sender.id;
-				const query = (argstring == '') ? senderId : argstring;
-				const watchList = [];
-				for (const user in this.watch.comments) {
-					if (query in this.watch.comments[user]) {
-						watchList.push(user);
-					}
-				}
-				this.env.sendNotice(sender,
-					(watchList.length > 0) ?
-					watchList.join(', ') :
-					'Comment watchlist empty!');
-			},
-			'pcommentwatchadd': (returnChannel, argstring, sender) => {
-				if (argstring == '') {
-					this.env.sendHighlight(returnChannel, sender,
-						'Please provide a username.');
-					return;
-				}
-				const users = argstring.split(' ');
-				const senderId = sender.id;
-				for (const user of users) {
-					if (!this.isValidUsername(user)) {
-						this.env.sendHighlight(
-							returnChannel, sender,
-							`Invalid username: ${user}`);
-						return;
-					}
-				}
-				for (const user of users) {
-					if (!(user in this.watch.comments)) {
-						this.watch.comments[user] = {};
-					}
-					this.watch.comments[user][senderId] = true;
-				}
-				this.saveWatch();
-				this.env.sendHighlight(returnChannel, sender,
-					'Comment watch added!');
-			},
-			'pcommentwatchrem': (returnChannel, argstring, sender) => {
-				const users = argstring.split(' ');
-				const senderId = sender.id;
-				let numWatchesRemoved = 0;
-				for (const user of users) {
-					if ((user in this.watch.comments) &&
-						(senderId in this.watch.comments[user])) {
-						delete this.watch.comments[user][senderId];
-						numWatchesRemoved++;
-					}
-					else{
-						this.env.sendHighlight(
-							returnChannel, sender,
-							user +
-							' isn\'t not on your comment watchlist!');
-					}
-				}
-				this.saveWatch();
-				this.env.sendHighlight(returnChannel, sender,
-					numWatchesRemoved.toString() +
-					' comment watches removed!');
-				return;
-			},
+			// 'pcommentwatchlist': (returnChannel, argstring, sender) => {
+			// 	const senderId = sender.id;
+			// 	const query = (argstring == '') ? senderId : argstring;
+			// 	const watchList = [];
+			// 	for (const user in this.watch.comments) {
+			// 		if (query in this.watch.comments[user]) {
+			// 			watchList.push(user);
+			// 		}
+			// 	}
+			// 	this.env.sendNotice(sender,
+			// 		(watchList.length > 0) ?
+			// 		watchList.join(', ') :
+			// 		'Comment watchlist empty!');
+			// },
+			// 'pcommentwatchadd': (returnChannel, argstring, sender) => {
+			// 	if (argstring == '') {
+			// 		this.env.sendHighlight(returnChannel, sender,
+			// 			'Please provide a username.');
+			// 		return;
+			// 	}
+			// 	const users = argstring.split(' ');
+			// 	const senderId = sender.id;
+			// 	for (const user of users) {
+			// 		if (!this.isValidUsername(user)) {
+			// 			this.env.sendHighlight(
+			// 				returnChannel, sender,
+			// 				`Invalid username: ${user}`);
+			// 			return;
+			// 		}
+			// 	}
+			// 	for (const user of users) {
+			// 		if (!(user in this.watch.comments)) {
+			// 			this.watch.comments[user] = {};
+			// 		}
+			// 		this.watch.comments[user][senderId] = true;
+			// 	}
+			// 	this.saveWatch();
+			// 	this.env.sendHighlight(returnChannel, sender,
+			// 		'Comment watch added!');
+			// },
+			// 'pcommentwatchrem': (returnChannel, argstring, sender) => {
+			// 	const users = argstring.split(' ');
+			// 	const senderId = sender.id;
+			// 	let numWatchesRemoved = 0;
+			// 	for (const user of users) {
+			// 		if ((user in this.watch.comments) &&
+			// 			(senderId in this.watch.comments[user])) {
+			// 			delete this.watch.comments[user][senderId];
+			// 			numWatchesRemoved++;
+			// 		}
+			// 		else{
+			// 			this.env.sendHighlight(
+			// 				returnChannel, sender,
+			// 				user +
+			// 				' isn\'t not on your comment watchlist!');
+			// 		}
+			// 	}
+			// 	this.saveWatch();
+			// 	this.env.sendHighlight(returnChannel, sender,
+			// 		numWatchesRemoved.toString() +
+			// 		' comment watches removed!');
+			// 	return;
+			// },
 			'pquery': (returnChannel, argstring, sender) => {
 				const saveId = parseInt(argstring);
 				if (saveId.toString() != argstring.trim()) {
@@ -444,13 +462,19 @@ class PowderPlugin {
 		}
 		return watchlist;
 	}
-	sendWatchlist(user, query = user.id) {
-		const users = this.db.all(
+	sendWatchlist(user, query = null) {
+		if (query == null)
+			query = Channel.getDmChan(
+				this.env.ircCli,
+				this.env.discordCli,
+				user
+			).fullName;
+		this.db.all(
 			`SELECT watchee FROM user_watches WHERE watcher = (?) UNION ALL SELECT (watchee || '+') AS watchee FROM user_comment_watches WHERE watcher = (?) UNION ALL SELECT ('~' || watchee) AS watchee FROM comment_watches WHERE watcher = (?)`,
 			[query, query, query],
 			(err, rows) => {
 				if (err) {
-					console.error(err);
+					console.error(`error while getting watchlist: ${err}`);
 					return;
 				}
 				let watchees = rows.map(row => row.watchee);
@@ -510,25 +534,58 @@ class PowderPlugin {
 			break;
 		}
 		case 'user': {
-			const users = Object.keys(this.watch.users);
-			this.getUserUpdates(users, (userUpdates) => {
+			const processUpdates = (userUpdates) => {
 				for (let i = 0; i < userUpdates.length; i++) {
 					const user = userUpdates[i].Username;
-					const watchers = this.watch.users[user];
-					for (const watcher in watchers) {
-						this.sendSave(
-							new Channel(Channel.TYPE_IRC,
+					const sendSaves = (watchers) => {
+						for (const watcher of watchers) {
+							this.sendSave(watcher, userUpdates[i]);
+						}
+					};
+					if (LEGACY) {
+						sendSaves(this.watch.users[user].map(user =>
+							new Channel(
+								Channel.TYPE_IRC,
 								new Channel.IrcChannelData(
-									watcher,
+									user,
 									this.env.ircCli
 								)
-							),
-							userUpdates[i]
+							)
+						));
+					}
+					else {
+						this.db.all(
+							`SELECT watcher FROM user_watches WHERE watchee = (?) UNION ALL SELECT watcher FROM user_comment_watches WHERE watchee = (?)`,
+							[user, user + '+'],
+							(err, rows) => {
+								if (err) {
+									console.error(err);
+									return;
+								}
+								sendSaves(rows.map(row => Channel.fromString(row.watcher, this.env.ircCli, this.env.discordCli)));
+							}
 						);
 					}
 				}
 				this.doTaskAsync();
-			});
+			};
+			if (LEGACY) {
+				const users = Object.keys(this.watch.users);
+				this.getUserUpdates(users, processUpdates);
+			}
+			else {
+				this.db.all(
+					`SELECT watchee FROM user_watches UNION ALL SELECT watchee FROM user_comment_watches`,
+					[],
+					(err, rows) => {
+						if (err) {
+							console.error(err);
+							return;
+						}
+						this.getUserUpdates(rows.map(row => row.watchee), processUpdates);
+					}
+				);
+			}
 			break;
 		}
 		case 'subframe':
@@ -553,16 +610,7 @@ class PowderPlugin {
 			});
 			break;
 		case 'commentsSweep': {
-			const users = Object.keys(this.watch.comments).sort();
-			if (users.length == 0)
-				this.doTaskAsync();
-			if (this.currCommentsSweepUserIndex >= users.length) {
-				this.currCommentsSweepUserIndex = 0;
-			}
-			this.getCommentUpdates(users[this.currCommentsSweepUserIndex],
-				this.currCommentsSweepPage,
-				(numSaves, commentUpdates) => {
-
+			const processCommentUpdates = (numSaves, commentUpdates) => {
 				this.currCommentsSweepPage++;
 				if (this.currCommentsSweepPage * 16 > numSaves) {
 					this.currCommentsSweepPage = 0;
@@ -577,47 +625,91 @@ class PowderPlugin {
 					});
 				}
 				this.doTaskAsync();
-			});
+			};
+			const processWatchedUsers = (users) => {
+				if (users.length == 0)
+					this.doTaskAsync();
+				if (this.currCommentsSweepUserIndex >= users.length) {
+					this.currCommentsSweepUserIndex = 0;
+				}
+				this.getCommentUpdates(
+					users[this.currCommentsSweepUserIndex],
+					this.currCommentsSweepPage,
+					processCommentUpdates
+				);
+			};
+			if (LEGACY) {
+				const users = Object.keys(this.watch.comments).sort();
+				processWatchedUsers(users);
+			}
+			else {
+				this.db.all(
+					`SELECT watchee FROM user_comment_watches`,
+					[],
+					(err, rows) => {
+						if (err) {
+							console.error(err);
+							return;
+						}
+						processWatchedUsers(rows.map(row => row.watchee));
+					}
+				);
+			}
 			break;
 		}
 		case 'comments':
 			this.getComments(currTask.save, currTask.newComments,
 				(commentUpdates) => {
-					// console.log(`announcing ${commentUpdates.length} comments for save ${currTask.save.ID}`);
-					const watchers = Object.keys(
-						this.watch.comments[currTask.save.Username]);
-					for (const watcher of watchers) {
-						// assume IRC nick is the same as powder toy
-						// username for this simple filter
-						if (commentUpdates.every((comment) => {
-							return comment.Username.toLowerCase() ==
-								watcher.toLowerCase();
-							})) {
-
-							continue;
+					const sendComments = (watchers) => {
+						for (const watcher of watchers) {
+							// assume nick is the same as powder toy
+							// username for this simple filter
+							const commentByUser = (comment) =>
+								(comment.Username.toLowerCase() == watcher.name.toLowerCase());
+							if (commentUpdates.every(commentByUser))
+								continue;
+							this.env.sendMessage(
+								watcher,
+								`New comments for '${currTask.save.Name}'; http://tpt.io/~${currTask.save.ID}`
+							);
+							for (let i = commentUpdates.length - 1; i >= 0; i--) {
+								const comment = commentUpdates[i];
+								if (commentByUser(comment))
+									continue;
+								this.env.sendMessage(
+									watcher,
+									`<${comment.Username}> ${comment.Text}`
+								);
+							}
 						}
-						this.env.sendMessage(
+					};
+					// console.log(`announcing ${commentUpdates.length} comments for save ${currTask.save.ID}`);
+					if (LEGACY) {
+						const watchers = Object.keys(this.watch.comments[currTask.save.Username]).map(user =>
 							new Channel(
 								Channel.TYPE_IRC,
-								new Channel.IrcChannelData(watcher)
-							),
-							`New comments for '${currTask.save.Name}'; http://tpt.io/~${currTask.save.ID}`);
-						for (let i = commentUpdates.length - 1;
-							i >= 0; i--) {
-
-							const comment = commentUpdates[i];
-							if (comment.Username.toLowerCase() ==
-								watcher.toLowerCase()) {
-
-								continue;
+								new Channel.IrcChannelData(
+									user,
+									this.env.ircCli
+								)
+							)
+						);
+						sendComments(watchers);
+					}
+					else {
+						this.db.all(
+							`SELECT watcher FROM user_comment_watches WHERE watchee = (?) UNION ALL SELECT watcher FROM comment_watches WHERE watchee = (?)`,
+							[currTask.save.Username, `~${currTask.save.ID}`],
+							(err, rows) => {
+								if (err) {
+									console.error(err);
+									return;
+								}
+								sendComments(rows.map(row =>
+									Channel.fromString(row.watcher, this.env.ircCli, this.env.discordCli)
+								));
 							}
-							this.env.sendMessage(
-								new Channel(
-									Channel.TYPE_IRC,
-									new Channel.IrcChannelData(watcher)
-								),
-								`<${comment.Username}> ${comment.Text}`);
-						}
+						);
 					}
 					this.cache.comments[currTask.save.ID] = currTask.save.Comments;
 					this.saveCache();
@@ -676,7 +768,7 @@ class PowderPlugin {
 			json: true
 		}, (err, resp, body) => {
 			if (err) {
-				console.log(err);
+				console.error(err);
 				handleUpdates([]);
 				return false;
 			}
@@ -706,7 +798,7 @@ class PowderPlugin {
 			json: true
 		}, (err, resp, body) => {
 			if (err) {
-				console.log(err);
+				console.error(err);
 				onComplete();
 				return false;
 			}
@@ -751,13 +843,13 @@ class PowderPlugin {
 			json: true
 		}, (err, resp, body) => {
 			if (err) {
-				console.log(err);
+				console.error(err);
 				handleUpdates([]);
 				return false;
 			}
 			if (!body.Saves) {
-				console.log('PowderPlugin: no Saves in body');
-				console.log(body);
+				console.error('PowderPlugin: no Saves in body');
+				console.error(body);
 				handleUpdates(0, []);
 				return false;
 			}
@@ -794,13 +886,13 @@ class PowderPlugin {
 			json: true
 		}, (err, resp, body) => {
 			if (err) {
-				console.log(err);
+				console.error(err);
 				handleUpdates(0, []);
 				return false;
 			}
 			if (!body.Saves) {
-				console.log('PowderPlugin: no Saves in body');
-				console.log(body);
+				console.error('PowderPlugin: no Saves in body');
+				console.error(body);
 				handleUpdates(0, []);
 				return false;
 			}
@@ -830,7 +922,7 @@ class PowderPlugin {
 			json: true
 		}, (err, resp, body) => {
 			if (err) {
-				console.log(err);
+				console.error(err);
 				handleUpdates([]);
 				return false;
 			}
@@ -844,7 +936,7 @@ class PowderPlugin {
 			json: true
 		}, (err, resp, body) => {
 			if (err) {
-				console.log(err);
+				console.error(err);
 				handleSave(null);
 				return false;
 			}

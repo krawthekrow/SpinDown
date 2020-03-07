@@ -19,7 +19,6 @@ class HangmanPlugin{
 				const splitMsg = argstring.split(' ');
 				if (returnChannel.isQuery) {
 					if (splitMsg.length != 2) {
-						console.log(splitMsg);
 						this.env.printHelp(
 							returnChannel, 'hmstart', sender
 						);
@@ -89,7 +88,6 @@ class HangmanPlugin{
 					return;
 				}
 				const guess = argstring.trim().toLowerCase();
-				console.log(guess);
 				if (!/^[a-z]$/.test(guess)) {
 					this.env.sendHighlight(returnChannel, sender,
 						'Please guess a single character >:|');

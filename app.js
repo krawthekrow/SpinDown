@@ -27,8 +27,8 @@ const reloadPluginsManager = () => {
 		pluginsManager.reloadSelf = reloadPluginsManager;
 	}
 	catch(err){
-		console.log('Error reloading master module:');
-		console.log(err);
+		console.error('Error reloading master module:');
+		console.error(err);
 	}
 };
 
@@ -87,8 +87,8 @@ ircCli.addListener('message', (from, to, message, messageData) => {
 		pluginsManager.handleIrcMessage(from, to, message, messageData);
 	}
 	catch(err){
-		console.log(`Error handling message "${message}" from ${from} to ${to}:`);
-		console.log(err);
+		console.error(`Error handling message "${message}" from ${from} to ${to}:`);
+		console.error(err);
 	}
 });
 ircCli.on('join', (channel, nick, messageData) => {

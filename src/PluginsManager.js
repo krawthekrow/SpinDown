@@ -228,14 +228,14 @@ class PluginsManager {
 			this.ircCli.notice(user.val.nick, msg);
 			break;
 		case Channel.TYPE_DISCORD:
-			// TODO: this
+			this.sendMessage(Channel.getDmChan(this.ircCli, this.discordCli, user), msg);
 			break;
 		default:
 			throw new Error('unrecognized channel type');
 		}
 	}
 	sendMessage(chan, msg){
-		console.log(`<${config.BOT_NICK}${chan.isQuery ? '' : `:${chan.fullName}`}> ${msg}`);
+		console.log(`<${config.BOT_NICK}:${chan.fullName}> ${msg}`);
 		this.sendMessageNoBridge(chan, msg);
 		this.plugins.get('bridge').handleInternalMessage(
 			this.getUser(chan.type), chan, msg
