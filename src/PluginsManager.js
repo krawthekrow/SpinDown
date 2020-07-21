@@ -216,7 +216,7 @@ class PluginsManager {
 			this.ircCli.action(chan.name, msg);
 			break;
 		case Channel.TYPE_DISCORD:
-			// TODO: this
+			this.sendMessage(chan, `_SpinDown ${msg}_`);
 			break;
 		default:
 			throw new Error('unrecognized channel type');

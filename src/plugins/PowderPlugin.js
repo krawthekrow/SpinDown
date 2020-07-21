@@ -850,7 +850,7 @@ class PowderPlugin {
 			if (!body.Saves) {
 				console.error('PowderPlugin: no Saves in body');
 				console.error(body);
-				handleUpdates(0, []);
+				handleUpdates([]);
 				return false;
 			}
 			const res = [];

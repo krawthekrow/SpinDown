@@ -24,7 +24,9 @@ class Channel {
 		case Channel.TYPE_IRC:
 			return this.name == user.getNick(this);
 		case Channel.TYPE_DISCORD:
-			return this.val.recipient.id == user.val.id;
+			if ('recipient' in this.val)
+				return this.val.recipient.id == user.val.id;
+			return this.val.id == user.val.id;
 		default:
 			throw new Error('unrecognized channel type');
 		}
@@ -36,7 +38,7 @@ class Channel {
 				throw new Error('zero-length channel name');
 			return this.name[0] != '#';
 		case Channel.TYPE_DISCORD:
-			return this.val.type == 'dm';
+			return 'username' in this.val || this.val.type == 'dm';
 		default:
 			throw new Error('unrecognized channel type');
 		}
@@ -46,6 +48,8 @@ class Channel {
 		case Channel.TYPE_IRC:
 			return this.val.name;
 		case Channel.TYPE_DISCORD:
+			if ('username' in this.val)
+				return this.val.username;
 			if ('recipient' in this.val)
 				return this.val.recipient.username;
 			return `#${this.val.name}`;
@@ -60,8 +64,8 @@ class Channel {
 		case Channel.TYPE_DISCORD:
 			if ('guild' in this.val)
 				return `discord:${this.val.guild.name}#${this.val.name}`;
-			if ('recipient' in this.val)
-				return `discord-dm:${this.val.recipient.tag}`;
+			if ('tag' in this.val)
+				return `discord-dm:${this.val.tag}`;
 			return `discord:${this.name}`;
 		default:
 			throw new Error('unrecognized channel type');
@@ -90,7 +94,7 @@ class Channel {
 		case User.TYPE_DISCORD:
 			return new Channel(
 				Channel.TYPE_DISCORD,
-				user.val.dmChannel
+				user.val
 			);
 		default:
 			throw new Error('unrecognized user type');
@@ -149,7 +153,7 @@ class Channel {
 				return null;
 			return new Channel(
 				Channel.TYPE_DISCORD,
-				user.dmChannel
+				user
 			);
 		}
 
@@ -203,7 +207,8 @@ class Channel {
 			return !this.isQuery &&
 				user.val.nick in this.val.client.chans[this.name].users;
 		case Channel.TYPE_DISCORD:
-			return this.val.guild.member(user.val.id) != null;
+			return !this.isQuery &&
+				this.val.guild.member(user.val.id) != null;
 		default:
 			throw new Error('unrecognized channel type');
 		}

@@ -49,12 +49,14 @@ discordCli.on('ready', () => {
 });
 
 discordCli.on('message', msg => {
+	if (!pluginsManager)
+		return;
 	try{
 		pluginsManager.handleDiscordMessage(msg);
 	}
 	catch(err){
-		console.log(`Error handling message "${msg.content}" from ${msg.author.username} to ${msg.channel.name}:`);
-		console.log(err);
+		console.error(`Error handling message "${msg.content}" from ${msg.author.username} to ${msg.channel.name}:`);
+		console.error(err);
 	}
 });
 
@@ -78,7 +80,8 @@ if('AUTOJOIN' in config) ircConfig.channels = config.AUTOJOIN;
 ircCli = new irc.Client(config.SERVER, config.BOT_NICK, ircConfig);
 
 ircCli.on('error', (msg) => {
-	console.log(msg);
+	console.error('irc error');
+	console.error(msg);
 });
 ircCli.addListener('message', (from, to, message, messageData) => {
 	if (!pluginsManager)
