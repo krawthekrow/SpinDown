@@ -218,12 +218,6 @@ class Channel {
 			!this.isQuery &&
 			'PowderBot' in this.val.client.chans[this.name].users;
 	}
-	ircDisableHighlight(nick) {
-		if (nick.length < 2)
-			return nick;
-		const zws = '\u200b';
-		return `${nick[0]}${zws}${nick.slice(1)}`
-	}
 	escapeIrcStr(str) {
 		switch (this.type) {
 		case Channel.TYPE_IRC:

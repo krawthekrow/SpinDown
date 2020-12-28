@@ -15,12 +15,14 @@ const reloadPluginsManager = () => {
 	const userFilename = './src/User.js';
 	const channelFilename = './src/Channel.js';
 	const messageFilename = './src/Message.js';
+	const formattingFilename = './src/formatting.js';
 	delete require.cache[require.resolve(filename)];
 	delete require.cache[require.resolve('./config.js')];
 	delete require.cache[require.resolve('./src/PermissionsManager.js')];
 	delete require.cache[require.resolve(userFilename)];
 	delete require.cache[require.resolve(channelFilename)];
 	delete require.cache[require.resolve(messageFilename)];
+	delete require.cache[require.resolve(formattingFilename)];
 	try{
 		const pluginsManagerClass = require(filename);
 		pluginsManager = new pluginsManagerClass(ircCli, discordCli);

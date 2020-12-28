@@ -1,5 +1,6 @@
 const config = require('../../config.js').PLUGINS.BRIDGE;
 const Channel = require('../Channel.js');
+const formatting = require('../formatting.js');
 const net = require('net');
 
 class BridgePlugin {
@@ -139,12 +140,29 @@ class BridgePlugin {
 			this.relayMsg(chan, ochan, user, processedMsg);
 		}
 	}
+	ircDisableHighlight(nick) {
+		if (nick.length < 2)
+			return nick;
+		const zws = '\u200b';
+		return `${nick[0]}${zws}${nick.slice(1)}`
+	}
+	formatIrcNick(nick) {
+		const rcolors = [ 19, 20, 22, 24, 25, 26, 27, 28, 29 ];
+		let sum = 0;
+		for (let i = 0; i < nick.length; i++) {
+			sum += nick.charCodeAt(i);
+		}
+		const color = rcolors[sum % rcolors.length];
+		const noHighlight = this.ircDisableHighlight(nick);
+		const c = '\x03';
+		return `${c}${color}${noHighlight}${c}`;
+	}
 	relayMsg(fromChan, toChan, user, msg) {
 		const nick = user.getNick(fromChan);
 		let nickPrepend;
 		switch (toChan.type) {
 		case Channel.TYPE_IRC:
-			nickPrepend = `[${toChan.ircDisableHighlight(nick)}]`;
+			nickPrepend = `[${this.formatIrcNick(nick)}]`;
 			break;
 		case Channel.TYPE_DISCORD:
 			nickPrepend = `[${nick}]`;
@@ -219,14 +237,15 @@ class BridgePlugin {
 		let index, newmsg;
 		if (fromType == Channel.TYPE_IRC) {
 			msg = this.encodeDiscordUserMentions(msg, to);
-			msg = to.escapeIrcStr(msg);
+			msg = formatting.formatFromIRCToDiscord(msg);
+			// msg = to.escapeIrcStr(msg);
 
 			return msg;
 		}
 		if (fromType == Channel.TYPE_DISCORD &&
 				toType == Channel.TYPE_IRC) {
-			msg = msg.replace(/\\([^a-zA-Z0-9\\s])/g, '$1');
-
+			// msg = msg.replace(/\\([^a-zA-Z0-9\\s])/g, '$1');
+			msg = formatting.formatFromDiscordToIRC(msg);
 			msg = this.decodeDiscordUserMentions(msg, from);
 
 			for (const attachment of attachments) {
