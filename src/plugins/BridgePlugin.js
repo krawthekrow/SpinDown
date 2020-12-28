@@ -144,7 +144,7 @@ class BridgePlugin {
 		let nickPrepend;
 		switch (toChan.type) {
 		case Channel.TYPE_IRC:
-			nickPrepend = `[${nick}]`;
+			nickPrepend = `[${toChan.ircDisableHighlight(nick)}]`;
 			break;
 		case Channel.TYPE_DISCORD:
 			nickPrepend = `[${nick}]`;
@@ -272,9 +272,6 @@ class BridgePlugin {
 		}
 		return newmsg;
 	}
-	static sanitizeMention(str) {
-		return str.toLowerCase().replace(/[^a-z0-9]/g, '');
-	}
 	encodeDiscordUserMentions(msg, chan) {
 		if (chan.val.members == null)
 			return msg;
@@ -298,36 +295,17 @@ class BridgePlugin {
 			}
 
 			const nick = match[2].toLowerCase();
-			let memberMatches = chan.val.members.filter(member => {
-				return member.displayName.toLowerCase() == nick ||
-					member.user.username.toLowerCase() == nick ||
-					member.user.tag.toLowerCase() == nick;
-			});
-			if (memberMatches.size == 0) {
-				memberMatches = chan.val.members.filter(member => {
-					return BridgePlugin.sanitizeMention(member.displayName) == nick ||
-						BridgePlugin.sanitizeMention(member.user.username) == nick ||
-						BridgePlugin.sanitizeMention(member.user.tag) == nick;
-				});
-			}
-			if (memberMatches.size == 0 && nick.length >= 3) {
-				memberMatches = chan.val.members.filter(member => {
-					return BridgePlugin.sanitizeMention(member.displayName).startsWith(nick) ||
-						BridgePlugin.sanitizeMention(member.user.username).startsWith(nick) ||
-						BridgePlugin.sanitizeMention(member.user.tag).startsWith(nick);
-				});
-			}
-			if (memberMatches.size != 1) {
+			const encoded = chan.encodeMention(nick);
+			if (encoded == null) {
 				newmsg += msg.substring(index, re.lastIndex);
 				index = re.lastIndex;
-				continue;
 			}
-			const member = memberMatches.first();
-			const hasNick = member.nickname != null;
-
-			newmsg += msg.substring(index, match.index);
-			index = re.lastIndex;
-			newmsg += `<@${hasNick ? '!':''}${member.id}>${match[4]}`;
+			else {
+				newmsg += msg.substring(index, match.index);
+				newmsg += encoded;
+				newmsg += match[4];
+				index = re.lastIndex;
+			}
 		}
 		return newmsg;
 	}

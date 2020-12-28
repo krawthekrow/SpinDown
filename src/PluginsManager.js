@@ -13,6 +13,7 @@ const PLUGIN_NAMES = new Map([
 	['hangman', 'HangmanPlugin'],
 	['powder', 'PowderPlugin'],
 	['bridge', 'BridgePlugin'],
+	['eat', 'EatPlugin'],
 	['help', 'HelpPlugin']
 ]);
 

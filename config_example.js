@@ -45,6 +45,13 @@ module.exports = {
 			JOIN_PART_LINKS: [
 				['irc:#channel', 'discord:server#channel'],
 			],
-		}
+		},
+		EAT: {
+			CHANNEL: 'discord:server#channel',
+			HIGHLIGHT_USER: 'username#1234',
+			QGEN_FILENAME: path.resolve(
+				__dirname, 'src/plugins/qgen/QuestionGenerator.js'
+			)
+		},
 	},
 };

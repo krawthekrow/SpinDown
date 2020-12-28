@@ -218,6 +218,12 @@ class Channel {
 			!this.isQuery &&
 			'PowderBot' in this.val.client.chans[this.name].users;
 	}
+	ircDisableHighlight(nick) {
+		if (nick.length < 2)
+			return nick;
+		const zws = '\u200b';
+		return `${nick[0]}${zws}${nick.slice(1)}`
+	}
 	escapeIrcStr(str) {
 		switch (this.type) {
 		case Channel.TYPE_IRC:
@@ -245,6 +251,43 @@ class Channel {
 		default:
 			throw new Error('unrecognized channel type');
 		}
+	}
+	encodeMention(nick, allowShorthand = true) {
+		if (this.type != Channel.TYPE_DISCORD) {
+			return null;
+		}
+		if (this.val.type == 'dm') {
+			return nick;
+		}
+		let memberMatches = this.val.members.filter(member => {
+			return member.displayName.toLowerCase() == nick ||
+				member.user.username.toLowerCase() == nick ||
+				member.user.tag.toLowerCase() == nick;
+		});
+		const sanitizeMention = (str) => {
+			return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+		}
+		if (memberMatches.size == 0) {
+			memberMatches = this.val.members.filter(member => {
+				return sanitizeMention(member.displayName) == nick ||
+					sanitizeMention(member.user.username) == nick ||
+					sanitizeMention(member.user.tag) == nick;
+			});
+		}
+		if (allowShorthand && memberMatches.size == 0 && nick.length >= 3) {
+			memberMatches = this.val.members.filter(member => {
+				return sanitizeMention(member.displayName).startsWith(nick) ||
+					sanitizeMention(member.user.username).startsWith(nick) ||
+					sanitizeMention(member.user.tag).startsWith(nick);
+			});
+		}
+		if (memberMatches.size != 1) {
+			return null;
+		}
+		const member = memberMatches.first();
+		const hasNick = member.nickname != null;
+
+		return `<@${hasNick ? '!':''}${member.id}>`;
 	}
 };
 

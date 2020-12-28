@@ -78,6 +78,21 @@ class HangmanPlugin{
 				this.showHints(returnChannel);
 			},
 			'hmguess': (returnChannel, argstring, sender) => {
+				const loseLife = () => {
+					game.lives--;
+					if(game.lives == 0){
+						this.env.sendMessage(returnChannel,
+							'You lose! The solution was \'' +
+							game.solution + '\'.');
+						delete this.ongoingGames[returnChannel.id];
+						return true;
+					}
+					return false;
+				};
+				const win = () => {
+					this.env.sendMessage(returnChannel, 'You won!');
+					delete this.ongoingGames[returnChannel.id];
+				};
 				const game = this.requestGame(returnChannel, sender);
 				if (game == null)
 					return;
@@ -88,9 +103,21 @@ class HangmanPlugin{
 					return;
 				}
 				const guess = argstring.trim().toLowerCase();
+				if (guess.length == game.solution.length) {
+					if (guess == game.solution) {
+						win();
+						return;
+					}
+					else {
+						this.env.sendHighlight(returnChannel, sender,
+							`\'${guess}\' is wrong! Life point deducted.`);
+						loseLife();
+						return;
+					}
+				}
 				if (!/^[a-z]$/.test(guess)) {
 					this.env.sendHighlight(returnChannel, sender,
-						'Please guess a single character >:|');
+						'Please guess a single letter >:|');
 					return;
 				}
 				if (game.guesses.has(guess)) {
@@ -99,14 +126,9 @@ class HangmanPlugin{
 					return;
 				}
 				if (game.solution.indexOf(guess) == -1) {
-					game.lives--;
 					this.env.sendMessage(returnChannel,
 						'The solution does not contain \'' + guess + '\'.');
-					if(game.lives == 0){
-						this.env.sendMessage(returnChannel,
-							'You lose! The solution was \'' +
-							game.solution + '\'.');
-						delete this.ongoingGames[returnChannel.id];
+					if (loseLife()) {
 						return;
 					}
 				}
@@ -114,14 +136,13 @@ class HangmanPlugin{
 				this.showHints(returnChannel);
 				let isGameFinished = true;
 				for (let i = 0; i < game.solution.length; i++) {
-					if (!game.guesses.has(game.solution[i])) {
+					if (/^[a-z]$/.test(game.solution[i]) && !game.guesses.has(game.solution[i])) {
 						isGameFinished = false;
 						break;
 					}
 				}
 				if (isGameFinished) {
-					this.env.sendMessage(returnChannel, 'You won!');
-					delete this.ongoingGames[returnChannel.id];
+					win();
 					return;
 				}
 			}
@@ -150,7 +171,7 @@ class HangmanPlugin{
 		const solution = game.solution;
 		let hintArr = new Array(solution.length).fill('_');
 		for(let i = 0; i < solution.length; i++){
-			if(game.guesses.has(solution[i])){
+			if(!/^[a-z]$/.test(game.solution[i]) || game.guesses.has(solution[i])){
 				hintArr[i] = solution[i];
 			}
 		}
