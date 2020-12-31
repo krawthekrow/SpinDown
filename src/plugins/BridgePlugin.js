@@ -1,6 +1,7 @@
 const config = require('../../config.js').PLUGINS.BRIDGE;
 const Channel = require('../Channel.js');
 const formatting = require('../formatting.js');
+const colors = require('irc-colors');
 const net = require('net');
 
 class BridgePlugin {
@@ -147,7 +148,8 @@ class BridgePlugin {
 		return `${nick[0]}${zws}${nick.slice(1)}`
 	}
 	formatIrcNick(nick) {
-		const rcolors = [ 19, 20, 22, 24, 25, 26, 27, 28, 29 ];
+		// const rcolors = [ 19, 20, 22, 24, 25, 26, 27, 28, 29 ];
+		const rcolors = [ 3, 4, 6, 7, 9, 10, 12, 2, 13 ];
 		let sum = 0;
 		for (let i = 0; i < nick.length; i++) {
 			sum += nick.charCodeAt(i);
@@ -155,7 +157,7 @@ class BridgePlugin {
 		const color = rcolors[sum % rcolors.length];
 		const noHighlight = this.ircDisableHighlight(nick);
 		const c = '\x03';
-		return `${c}${color}${noHighlight}${c}`;
+		return `${c}${color.toString().padStart(2, '0')}${colors.bold(noHighlight)}${c}`;
 	}
 	relayMsg(fromChan, toChan, user, msg) {
 		const nick = user.getNick(fromChan);
@@ -165,7 +167,7 @@ class BridgePlugin {
 			nickPrepend = `[${this.formatIrcNick(nick)}]`;
 			break;
 		case Channel.TYPE_DISCORD:
-			nickPrepend = `[${nick}]`;
+			nickPrepend = `[**${nick}**]`;
 			break;
 		default:
 			throw new Error('unrecognized channel type');
@@ -228,6 +230,32 @@ class BridgePlugin {
 			throw new Error('unrecognized channel type');
 		}
 	}
+	convertSpoilerTags(msg) {
+		const c = '\x03';
+		let currStart = 0;
+		let res = '';
+		let inSpoiler = false;
+		for (let i = 1; i < msg.length; i++) {
+			if (msg[i] == '|' && msg[i-1] == '|') {
+				if (inSpoiler) {
+					res += `${c}01,01${msg.slice(currStart, i-1)}${c}`;
+				}
+				else {
+					res += msg.slice(currStart, i-1);
+				}
+				currStart = i + 1;
+				inSpoiler = !inSpoiler;
+				i += 2;
+			}
+		}
+		if (inSpoiler) {
+			res += '||';
+		}
+		if (currStart < msg.length) {
+			res += msg.slice(currStart);
+		}
+		return res;
+	}
 	convertMessage(from, to, msg, attachments) {
 		const fromType = from.type;
 		const toType = to.type;
@@ -246,6 +274,7 @@ class BridgePlugin {
 				toType == Channel.TYPE_IRC) {
 			// msg = msg.replace(/\\([^a-zA-Z0-9\\s])/g, '$1');
 			msg = formatting.formatFromDiscordToIRC(msg);
+			msg = this.convertSpoilerTags(msg);
 			msg = this.decodeDiscordUserMentions(msg, from);
 
 			for (const attachment of attachments) {
