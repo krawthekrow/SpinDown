@@ -1,7 +1,7 @@
 // shamelessly copied from reactiflux/discord-irc
 
 const ircFormatting = require('irc-formatting');
-const SimpleMarkdown = require('simple-markdown');
+const SimpleMarkdown = require('./PatchedSimpleMarkdown.js');
 const colors = require('irc-colors');
 
 function mdNodeToIRC(node) {
@@ -14,6 +14,9 @@ function mdNodeToIRC(node) {
       return colors.bold(content);
     case 'u':
       return colors.underline(content);
+    case 'spoiler':
+      const c = '\x03';
+      return `${c}01,01${content}${c}`;
     default:
       return content;
   }
@@ -55,6 +58,6 @@ function formatFromIRCToDiscord(text) {
 }
 
 module.exports = {
-	formatFromDiscordToIRC: formatFromDiscordToIRC,
-	formatFromIRCToDiscord: formatFromIRCToDiscord,
+  formatFromDiscordToIRC: formatFromDiscordToIRC,
+  formatFromIRCToDiscord: formatFromIRCToDiscord,
 };

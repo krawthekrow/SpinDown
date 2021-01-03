@@ -230,32 +230,6 @@ class BridgePlugin {
 			throw new Error('unrecognized channel type');
 		}
 	}
-	convertSpoilerTags(msg) {
-		const c = '\x03';
-		let currStart = 0;
-		let res = '';
-		let inSpoiler = false;
-		for (let i = 1; i < msg.length; i++) {
-			if (msg[i] == '|' && msg[i-1] == '|') {
-				if (inSpoiler) {
-					res += `${c}01,01${msg.slice(currStart, i-1)}${c}`;
-				}
-				else {
-					res += msg.slice(currStart, i-1);
-				}
-				currStart = i + 1;
-				inSpoiler = !inSpoiler;
-				i += 2;
-			}
-		}
-		if (inSpoiler) {
-			res += '||';
-		}
-		if (currStart < msg.length) {
-			res += msg.slice(currStart);
-		}
-		return res;
-	}
 	convertMessage(from, to, msg, attachments) {
 		const fromType = from.type;
 		const toType = to.type;
@@ -274,7 +248,6 @@ class BridgePlugin {
 				toType == Channel.TYPE_IRC) {
 			// msg = msg.replace(/\\([^a-zA-Z0-9\\s])/g, '$1');
 			msg = formatting.formatFromDiscordToIRC(msg);
-			msg = this.convertSpoilerTags(msg);
 			msg = this.decodeDiscordUserMentions(msg, from);
 
 			for (const attachment of attachments) {
