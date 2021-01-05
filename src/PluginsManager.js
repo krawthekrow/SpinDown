@@ -166,11 +166,19 @@ class PluginsManager {
 		}
 	}
 	handleIrcAction(from, to, message, messageData) {
-		this.handleMessage(
+		this.handleAction(
 			this.makeIrcUser(messageData),
 			this.makeIrcChannel(to),
-			new Message(Message.TYPE_IRC, `*${messageData.nick} ${message}`)
+			new Message(Message.TYPE_IRC, message)
 		);
+	}
+	handleAction(user, chan, msg) {
+		if (User.equal(this.getUser(chan.type), user))
+			return false;
+		for (const [pluginName, plugin] of this.plugins) {
+			if ('handleAction' in plugin)
+				plugin.handleAction(user, chan, msg.content);
+		}
 	}
 	handleMessage(user, chan, msg) {
 		if (User.equal(this.getUser(chan.type), user))

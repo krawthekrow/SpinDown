@@ -39,6 +39,9 @@ module.exports = {
 			DB_PATH: '/var/db/powder.db' // needs to be a full path
 		},
 		BRIDGE: {
+			BLACKLIST: [
+				'irc:username@titlebot/hostmask',
+			],
 			LINKS: [
 				['irc:#channel', 'discord:server#channel'],
 			],

@@ -131,6 +131,9 @@ class BridgePlugin {
 		}
 	}
 	handleFullMessage(user, chan, msg) {
+		if (config.BLACKLIST.includes(user.id)) {
+			return;
+		}
 		const downstreams = this.getDownstreams(chan);
 		for (const ochan of downstreams) {
 			// convertMessage takes a Message, but
@@ -139,6 +142,20 @@ class BridgePlugin {
 				chan, ochan, msg.content, msg.attachments
 			);
 			this.relayMsg(chan, ochan, user, processedMsg);
+		}
+	}
+	handleAction(user, chan, msg) {
+		if (config.BLACKLIST.includes(user.id)) {
+			return;
+		}
+		const downstreams = this.getDownstreams(chan);
+		for (const ochan of downstreams) {
+			// convertMessage takes a Message, but
+			// processedMsg is a string
+			const processedMsg = this.convertMessage(
+				chan, ochan, msg, []
+			);
+			this.relayAction(chan, ochan, user, processedMsg);
 		}
 	}
 	ircDisableHighlight(nick) {
@@ -158,6 +175,26 @@ class BridgePlugin {
 		const noHighlight = this.ircDisableHighlight(nick);
 		const c = '\x03';
 		return `${c}${color.toString().padStart(2, '0')}${colors.bold(noHighlight)}${c}`;
+	}
+	relayAction(fromChan, toChan, user, msg) {
+		const nick = user.getNick(fromChan);
+		let nickPrepend;
+		switch (toChan.type) {
+		case Channel.TYPE_IRC:
+			nickPrepend = `*${this.formatIrcNick(nick)}`;
+			this.env.sendMessageNoBridge(
+				toChan, `${nickPrepend} ${msg}`
+			);
+			break;
+		case Channel.TYPE_DISCORD:
+			nickPrepend = `**${nick}**`;
+			this.env.sendMessageNoBridge(
+				toChan, `[${nickPrepend}] *${msg}*`
+			);
+			break;
+		default:
+			throw new Error('unrecognized channel type');
+		}
 	}
 	relayMsg(fromChan, toChan, user, msg) {
 		const nick = user.getNick(fromChan);
