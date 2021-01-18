@@ -63,6 +63,17 @@ discordCli.on('message', msg => {
 		console.error(err);
 	}
 });
+discordCli.on('messageUpdate', (oldMsg, msg) => {
+	if (!pluginsManager)
+		return;
+	try{
+		pluginsManager.handleDiscordEdit(oldMsg, msg);
+	}
+	catch(err){
+		console.error(`Error handling message "${msg.content}" from ${msg.author.username} to ${msg.channel.name}:`);
+		console.error(err);
+	}
+});
 
 if ('BOT_DISCORD_TOKEN' in config) {
 	discordCli.login(config.BOT_DISCORD_TOKEN);

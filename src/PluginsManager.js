@@ -136,6 +136,21 @@ class PluginsManager {
 			new Message(Message.TYPE_DISCORD, msg)
 		);
 	}
+	handleDiscordEdit(oldMsg, msg) {
+		if (msg.content.trim().length == 0)
+			return;
+		if (oldMsg.content == msg.content)
+			return;
+		let user = msg.author;
+		this.handleEdit(
+			new User(User.TYPE_DISCORD, user),
+			new Channel(
+				Channel.TYPE_DISCORD,
+				msg.channel
+			),
+			new Message(Message.TYPE_DISCORD, msg)
+		);
+	}
 	handleIrcJoin(chan, nick, messageData) {
 		this.plugins.get('bridge').handleIrcJoin(
 			this.makeIrcUser(messageData),
@@ -171,6 +186,14 @@ class PluginsManager {
 			this.makeIrcChannel(to),
 			new Message(Message.TYPE_IRC, message)
 		);
+	}
+	handleEdit(user, chan, msg) {
+		if (User.equal(this.getUser(chan.type), user))
+			return false;
+		for (const [pluginName, plugin] of this.plugins) {
+			if ('handleEdit' in plugin)
+				plugin.handleEdit(user, chan, msg);
+		}
 	}
 	handleAction(user, chan, msg) {
 		if (User.equal(this.getUser(chan.type), user))
