@@ -4,7 +4,7 @@
   "description": "Yet another IRC bot.",
   "main": "app.js",
   "dependencies": {
-    "@discordjs/uws": "^11.149.1",
+    "@discordjs/uws": "^10.149.0",
     "bufferutil": "^4.0.1",
     "discord.js": "^11.6.4",
     "erlpack": "github:discordapp/erlpack",
