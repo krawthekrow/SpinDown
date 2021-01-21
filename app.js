@@ -38,10 +38,25 @@ const reloadPluginsManager = () => {
 
 let discordConnected = false;
 let ircConnected = false;
+function fetchAllMembers(guilds) {
+	if (guilds.length == 0) {
+		return;
+	}
+	guilds[0].fetchMembers().then(() => {
+		fetchAllMembers(guilds.slice(1));
+	});
+}
 function onClientConnect() {
 	if (!discordConnected || !ircConnected)
 		return;
 	reloadPluginsManager();
+
+	const guildsMap = new Map();
+	for (const chan of discordCli.channels.values()) {
+		guildsMap.set(chan.guild.id, chan.guild);
+	}
+	const guilds = [...guildsMap.values()];
+	fetchAllMembers(guilds);
 }
 
 discordCli = new Discord.Client();
