@@ -23,6 +23,7 @@ function mdNodeToIRC(node) {
 }
 
 function formatFromDiscordToIRC(text) {
+  text = text.replace('¯\\_(ツ)_/¯', '¯\\\\\\_(ツ)_/¯');
   const markdownAST = SimpleMarkdown.defaultInlineParse(text);
   return markdownAST.map(mdNodeToIRC).join('');
 }

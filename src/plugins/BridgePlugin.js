@@ -309,10 +309,11 @@ class BridgePlugin {
 			return msg;
 
 		let index, newmsg;
-		if (fromType == Channel.TYPE_IRC) {
+		if (fromType == Channel.TYPE_IRC &&
+				toType == Channel.TYPE_DISCORD) {
 			msg = this.encodeDiscordUserMentions(msg, to);
+			msg = to.escapeIrcStr(msg);
 			msg = formatting.formatFromIRCToDiscord(msg);
-			// msg = to.escapeIrcStr(msg);
 
 			return msg;
 		}
