@@ -48,7 +48,7 @@ class PluginsManager {
 			}
 			catch(err) {
 				console.log('Error reloading module ' + name + ':');
-				console.log(err);
+				console.error(err);
 			}
 		}
 	}

@@ -469,8 +469,14 @@ class PowderPlugin {
 				this.env.discordCli,
 				user
 			).fullName;
-		this.db.all(
-			`SELECT watchee FROM user_watches WHERE watcher = (?) UNION ALL SELECT (watchee || '+') AS watchee FROM user_comment_watches WHERE watcher = (?) UNION ALL SELECT ('~' || watchee) AS watchee FROM comment_watches WHERE watcher = (?)`,
+		this.db.all(`
+			SELECT watchee FROM user_watches
+				WHERE watcher = (?) UNION ALL
+			SELECT (watchee || '+') AS watchee FROM user_comment_watches
+				WHERE watcher = (?) UNION ALL
+			SELECT ('~' || watchee) AS watchee FROM comment_watches
+				WHERE watcher = (?)
+		`,
 			[query, query, query],
 			(err, rows) => {
 				if (err) {

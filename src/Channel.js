@@ -148,7 +148,7 @@ class Channel {
 		if (match != null) {
 			if (match.length != 2)
 				throw new Error('match should have length 2');
-			const user = discordCli.users.find(user => user.tag == match[1]);
+			const user = discordCli.users.cache.find(user => user.tag == match[1]);
 			if (user == null)
 				return null;
 			return new Channel(
@@ -183,7 +183,7 @@ class Channel {
 			if (match.length != 3)
 				throw new Error('expected match of length 3');
 
-			const genericChan = discordCli.channels.find(chan => {
+			const genericChan = [...discordCli.channels.cache.values()].find(chan => {
 				if (chan.guild == null)
 					return match[1] == '' && chan.name == match[2];
 				return (
@@ -193,7 +193,7 @@ class Channel {
 			});
 			if (genericChan == null)
 				return null;
-			const val = discordCli.channels.get(genericChan.id);
+			const val = discordCli.channels.cache.get(genericChan.id);
 			return new Channel(Channel.TYPE_DISCORD, val);
 		default:
 			throw new Error('unrecognized channel type');
@@ -233,7 +233,7 @@ class Channel {
 					}
 					continue;
 				}
-				if ('*_~`'.includes(str[index])) {
+				if ('*_~`:'.includes(str[index])) {
 					newstr += `\\${str[index]}`;
 					index++;
 					continue;
@@ -246,6 +246,29 @@ class Channel {
 			throw new Error('unrecognized channel type');
 		}
 	}
+	getRoleByName(roleName) {
+		const roleMatches = this.val.guild.roles.cache.filter((role) => {
+			return role.name == roleName;
+		});
+		if (roleMatches.size != 1) {
+			return null;
+		}
+		return roleMatches.first();
+	}
+	encodeRoleMention(roleName) {
+		const role = this.getRoleByName(roleName);
+		if (role == null) {
+			return null;
+		}
+		return `<@&${role.id}>`;
+	}
+	getRoleMembers(roleName) {
+		const role = this.getRoleByName(roleName);
+		if (role == null) {
+			return null;
+		}
+		return role.members;
+	}
 	encodeMention(nick, allowShorthand = true) {
 		if (this.type != Channel.TYPE_DISCORD) {
 			return null;
@@ -253,6 +276,7 @@ class Channel {
 		if (this.val.type == 'dm') {
 			return nick;
 		}
+		// Channel.fromString('discord:powder-subframe#subframe', null, this.discordCli).val.guild.members.fetch().then(console.log)
 		let memberMatches = this.val.members.filter(member => {
 			return member.displayName.toLowerCase() == nick ||
 				member.user.username.toLowerCase() == nick ||

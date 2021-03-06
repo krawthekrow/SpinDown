@@ -42,8 +42,10 @@ function fetchAllMembers(guilds) {
 	if (guilds.length == 0) {
 		return;
 	}
-	guilds[0].fetchMembers().then(() => {
+	guilds[0].members.fetch().then(() => {
 		fetchAllMembers(guilds.slice(1));
+	}).catch((e) => {
+		console.error(e);
 	});
 }
 function onClientConnect() {
@@ -52,7 +54,7 @@ function onClientConnect() {
 	reloadPluginsManager();
 
 	const guildsMap = new Map();
-	for (const chan of discordCli.channels.values()) {
+	for (const chan of discordCli.channels.cache.values()) {
 		guildsMap.set(chan.guild.id, chan.guild);
 	}
 	const guilds = [...guildsMap.values()];
@@ -66,7 +68,6 @@ discordCli.on('ready', () => {
 	discordConnected = true;
 	onClientConnect();
 });
-
 discordCli.on('message', msg => {
 	if (!pluginsManager)
 		return;

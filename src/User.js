@@ -48,6 +48,17 @@ class User {
 			throw new Error('unrecognized user type');
 		}
 	}
+	// only for discord
+	getIsBot() {
+		switch(this.type) {
+		case User.TYPE_IRC:
+			return false;
+		case User.TYPE_DISCORD:
+			return this.val.bot;
+		default:
+			throw new Error('unrecognized user type');
+		}
+	}
 	static equal(user1, user2) {
 		return user1.id == user2.id;
 	}

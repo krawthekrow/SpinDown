@@ -162,6 +162,9 @@ class BridgePlugin {
 		if (config.BLACKLIST.includes(user.id)) {
 			return;
 		}
+		if (user.getIsBot()) {
+			return;
+		}
 		const downstreams = this.getDownstreams(chan);
 		for (const ochan of downstreams) {
 			// convertMessage takes a Message, but
@@ -322,6 +325,9 @@ class BridgePlugin {
 			// msg = msg.replace(/\\([^a-zA-Z0-9\\s])/g, '$1');
 			msg = formatting.formatFromDiscordToIRC(msg);
 			msg = this.decodeDiscordUserMentions(msg, from);
+			msg = this.decodeDiscordChannelMentions(msg, from);
+			msg = this.decodeDiscordRoleMentions(msg, from);
+			msg = this.decodeDiscordCustomEmoji(msg, from);
 
 			for (const attachment of attachments) {
 				if (msg != '')
@@ -339,7 +345,7 @@ class BridgePlugin {
 		let index = 0;
 		let newmsg = '';
 		for (;;) {
-			const match = BridgePlugin.USER_MENTION_REGEX.exec(msg);
+			const match = re.exec(msg);
 			if (match == null) {
 				newmsg += msg.substr(index);
 				break;
@@ -347,7 +353,7 @@ class BridgePlugin {
 			if (match.length != 2)
 				throw new Error('match should have length 2');
 
-			const user = this.discordCli.users.get(match[1]);
+			const user = this.discordCli.users.cache.get(match[1]);
 			if (user === undefined) {
 				newmsg += msg.substring(index, re.lastIndex);
 				index = re.lastIndex;
@@ -366,6 +372,80 @@ class BridgePlugin {
 		}
 		return newmsg;
 	}
+	decodeDiscordChannelMentions(msg, chan) {
+		const re = BridgePlugin.CHANNEL_MENTION_REGEX;
+		re.lastIndex = 0;
+		let index = 0;
+		let newmsg = '';
+		for (;;) {
+			const match = re.exec(msg);
+			if (match == null) {
+				newmsg += msg.substr(index);
+				break;
+			}
+			if (match.length != 2)
+				throw new Error('match should have length 2');
+
+			const ochan = chan.val.guild.channels.cache.get(match[1]);
+			if (ochan === undefined) {
+				newmsg += msg.substring(index, re.lastIndex);
+				index = re.lastIndex;
+				continue;
+			}
+
+			newmsg += msg.substring(index, match.index);
+			index = re.lastIndex;
+			newmsg += `#${ochan.name}`;
+		}
+		return newmsg;
+	}
+	decodeDiscordRoleMentions(msg, chan) {
+		const re = BridgePlugin.ROLE_MENTION_REGEX;
+		re.lastIndex = 0;
+		let index = 0;
+		let newmsg = '';
+		for (;;) {
+			const match = re.exec(msg);
+			if (match == null) {
+				newmsg += msg.substr(index);
+				break;
+			}
+			if (match.length != 2)
+				throw new Error('match should have length 2');
+
+			const role = chan.val.guild.roles.cache.get(match[1]);
+			if (role === undefined) {
+				newmsg += msg.substring(index, re.lastIndex);
+				index = re.lastIndex;
+				continue;
+			}
+
+			newmsg += msg.substring(index, match.index);
+			index = re.lastIndex;
+			newmsg += `@${role.name}`;
+		}
+		return newmsg;
+	}
+	decodeDiscordCustomEmoji(msg, chan) {
+		const re = BridgePlugin.CUSTOM_EMOJI_REGEX;
+		re.lastIndex = 0;
+		let index = 0;
+		let newmsg = '';
+		for (;;) {
+			const match = re.exec(msg);
+			if (match == null) {
+				newmsg += msg.substr(index);
+				break;
+			}
+			if (match.length != 3)
+				throw new Error('match should have length 3');
+
+			newmsg += msg.substring(index, match.index);
+			index = re.lastIndex;
+			newmsg += `${match[1]}`;
+		}
+		return newmsg;
+	}
 	encodeDiscordUserMentions(msg, chan) {
 		if (chan.val.members == null)
 			return msg;
@@ -380,15 +460,15 @@ class BridgePlugin {
 				newmsg += msg.substr(index);
 				break;
 			}
-			if (match.length != 5)
+			if (match.length != 6)
 				throw new Error('match should have length 5');
-			if (match[1] == '' && match[3] == '') {
+			if (match[2] == '' && match[4] == '') {
 				newmsg += msg.substring(index, re.lastIndex);
 				index = re.lastIndex;
 				continue;
 			}
 
-			const nick = match[2].toLowerCase();
+			const nick = match[3].toLowerCase();
 			const encoded = chan.encodeMention(nick);
 			if (encoded == null) {
 				newmsg += msg.substring(index, re.lastIndex);
@@ -397,7 +477,7 @@ class BridgePlugin {
 			else {
 				newmsg += msg.substring(index, match.index);
 				newmsg += encoded;
-				newmsg += match[4];
+				newmsg += match[5];
 				index = re.lastIndex;
 			}
 		}
@@ -408,7 +488,7 @@ class BridgePlugin {
 		// toChan has to be a discord channel
 		// note that there is a race condition here, but only the
 		// first time this is called
-		toChan.val.fetchPinnedMessages().then(messages => {
+		toChan.val.messages.fetchPinned().then(messages => {
 			let users = Object.keys(
 				this.ircCli.chans[fromChan.name].users
 			);
@@ -427,11 +507,12 @@ class BridgePlugin {
 	}
 };
 
+BridgePlugin.CUSTOM_EMOJI_REGEX = new RegExp('<a?(:[^\\s:]+:)(\\d+)>', 'g');
 BridgePlugin.USER_MENTION_REGEX = new RegExp('<@!?([0-9]+)>', 'g');
 BridgePlugin.ROLE_MENTION_REGEX = new RegExp('<@&([0-9]+)>', 'g');
 BridgePlugin.CHANNEL_MENTION_REGEX = new RegExp('<#([0-9]+)>', 'g');
 
-BridgePlugin.PLAIN_MENTION_REGEX = new RegExp('(@?)([^\\s,:]+)([:,]?)(\\s|$)', 'g');
+BridgePlugin.PLAIN_MENTION_REGEX = new RegExp('(^|\\s)(@?)([^\\s,:]+)([:,]?)(\\s|$)', 'g');
 
 BridgePlugin.IRC_MSG_MAX_LEN = 400;
 
