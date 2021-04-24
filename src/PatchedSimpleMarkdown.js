@@ -1419,164 +1419,164 @@ var defaultRules /* : DefaultRules */ = {
         react: function() { return ' | '; },
         html: function() { return ' &vert; '; },
     },
-    autolink: {
-        order: currOrder++,
-        match: inlineRegex(/^<([^: >]+:\/[^ >]+)>/),
-        parse: function(capture, parse, state) {
-            return {
-                type: "link",
-                content: [{
-                    type: "text",
-                    content: capture[1]
-                }],
-                target: capture[1]
-            };
-        },
-        react: null,
-        html: null
-    },
-    mailto: {
-        order: currOrder++,
-        match: inlineRegex(/^<([^ >]+@[^ >]+)>/),
-        parse: function(capture, parse, state) {
-            var address = capture[1];
-            var target = capture[1];
+    // autolink: {
+    //     order: currOrder++,
+    //     match: inlineRegex(/^<([^: >]+:\/[^ >]+)>/),
+    //     parse: function(capture, parse, state) {
+    //         return {
+    //             type: "link",
+    //             content: [{
+    //                 type: "text",
+    //                 content: capture[1]
+    //             }],
+    //             target: capture[1]
+    //         };
+    //     },
+    //     react: null,
+    //     html: null
+    // },
+    // mailto: {
+    //     order: currOrder++,
+    //     match: inlineRegex(/^<([^ >]+@[^ >]+)>/),
+    //     parse: function(capture, parse, state) {
+    //         var address = capture[1];
+    //         var target = capture[1];
 
-            // Check for a `mailto:` already existing in the link:
-            if (!AUTOLINK_MAILTO_CHECK_R.test(target)) {
-                target = "mailto:" + target;
-            }
+    //         // Check for a `mailto:` already existing in the link:
+    //         if (!AUTOLINK_MAILTO_CHECK_R.test(target)) {
+    //             target = "mailto:" + target;
+    //         }
 
-            return {
-                type: "link",
-                content: [{
-                    type: "text",
-                    content: address
-                }],
-                target: target
-            };
-        },
-        react: null,
-        html: null
-    },
-    url: {
-        order: currOrder++,
-        match: inlineRegex(/^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/),
-        parse: function(capture, parse, state) {
-            return {
-                type: "link",
-                content: [{
-                    type: "text",
-                    content: capture[1]
-                }],
-                target: capture[1],
-                title: undefined
-            };
-        },
-        react: null,
-        html: null
-    },
-    link: {
-        order: currOrder++,
-        match: inlineRegex(new RegExp(
-            "^\\[(" + LINK_INSIDE + ")\\]\\(" + LINK_HREF_AND_TITLE + "\\)"
-        )),
-        parse: function(capture, parse, state) {
-            var link ={
-                content: parse(capture[1], state),
-                target: unescapeUrl(capture[2]),
-                title: capture[3]
-            };
-            return link;
-        },
-        react: function(node, output, state) {
-            return reactElement(
-                'a',
-                state.key,
-                {
-                    href: sanitizeUrl(node.target),
-                    title: node.title,
-                    children: output(node.content, state)
-                }
-            );
-        },
-        html: function(node, output, state) {
-            var attributes = {
-                href: sanitizeUrl(node.target),
-                title: node.title
-            };
+    //         return {
+    //             type: "link",
+    //             content: [{
+    //                 type: "text",
+    //                 content: address
+    //             }],
+    //             target: target
+    //         };
+    //     },
+    //     react: null,
+    //     html: null
+    // },
+    // url: {
+    //     order: currOrder++,
+    //     match: inlineRegex(/^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/),
+    //     parse: function(capture, parse, state) {
+    //         return {
+    //             type: "link",
+    //             content: [{
+    //                 type: "text",
+    //                 content: capture[1]
+    //             }],
+    //             target: capture[1],
+    //             title: undefined
+    //         };
+    //     },
+    //     react: null,
+    //     html: null
+    // },
+    // link: {
+    //     order: currOrder++,
+    //     match: inlineRegex(new RegExp(
+    //         "^\\[(" + LINK_INSIDE + ")\\]\\(" + LINK_HREF_AND_TITLE + "\\)"
+    //     )),
+    //     parse: function(capture, parse, state) {
+    //         var link ={
+    //             content: parse(capture[1], state),
+    //             target: unescapeUrl(capture[2]),
+    //             title: capture[3]
+    //         };
+    //         return link;
+    //     },
+    //     react: function(node, output, state) {
+    //         return reactElement(
+    //             'a',
+    //             state.key,
+    //             {
+    //                 href: sanitizeUrl(node.target),
+    //                 title: node.title,
+    //                 children: output(node.content, state)
+    //             }
+    //         );
+    //     },
+    //     html: function(node, output, state) {
+    //         var attributes = {
+    //             href: sanitizeUrl(node.target),
+    //             title: node.title
+    //         };
 
-            return htmlTag("a", output(node.content, state), attributes);
-        }
-    },
-    image: {
-        order: currOrder++,
-        match: inlineRegex(new RegExp(
-            "^!\\[(" + LINK_INSIDE + ")\\]\\(" + LINK_HREF_AND_TITLE + "\\)"
-        )),
-        parse: function(capture, parse, state) {
-            var image = {
-                alt: capture[1],
-                target: unescapeUrl(capture[2]),
-                title: capture[3]
-            };
-            return image;
-        },
-        react: function(node, output, state) {
-            return reactElement(
-                'img',
-                state.key,
-                {
-                    src: sanitizeUrl(node.target),
-                    alt: node.alt,
-                    title: node.title
-                }
-            );
-        },
-        html: function(node, output, state) {
-            var attributes = {
-                src: sanitizeUrl(node.target),
-                alt: node.alt,
-                title: node.title
-            };
+    //         return htmlTag("a", output(node.content, state), attributes);
+    //     }
+    // },
+    // image: {
+    //     order: currOrder++,
+    //     match: inlineRegex(new RegExp(
+    //         "^!\\[(" + LINK_INSIDE + ")\\]\\(" + LINK_HREF_AND_TITLE + "\\)"
+    //     )),
+    //     parse: function(capture, parse, state) {
+    //         var image = {
+    //             alt: capture[1],
+    //             target: unescapeUrl(capture[2]),
+    //             title: capture[3]
+    //         };
+    //         return image;
+    //     },
+    //     react: function(node, output, state) {
+    //         return reactElement(
+    //             'img',
+    //             state.key,
+    //             {
+    //                 src: sanitizeUrl(node.target),
+    //                 alt: node.alt,
+    //                 title: node.title
+    //             }
+    //         );
+    //     },
+    //     html: function(node, output, state) {
+    //         var attributes = {
+    //             src: sanitizeUrl(node.target),
+    //             alt: node.alt,
+    //             title: node.title
+    //         };
 
-            return htmlTag("img", "", attributes, false);
-        }
-    },
-    reflink: {
-        order: currOrder++,
-        match: inlineRegex(new RegExp(
-            // The first [part] of the link
-            "^\\[(" + LINK_INSIDE + ")\\]" +
-            // The [ref] target of the link
-            "\\s*\\[([^\\]]*)\\]"
-        )),
-        parse: function(capture, parse, state) {
-            return parseRef(capture, state, {
-                type: "link",
-                content: parse(capture[1], state)
-            });
-        },
-        react: null,
-        html: null
-    },
-    refimage: {
-        order: currOrder++,
-        match: inlineRegex(new RegExp(
-            // The first [part] of the link
-            "^!\\[(" + LINK_INSIDE + ")\\]" +
-            // The [ref] target of the link
-            "\\s*\\[([^\\]]*)\\]"
-        )),
-        parse: function(capture, parse, state) {
-            return parseRef(capture, state, {
-                type: "image",
-                alt: capture[1]
-            });
-        },
-        react: null,
-        html: null
-    },
+    //         return htmlTag("img", "", attributes, false);
+    //     }
+    // },
+    // reflink: {
+    //     order: currOrder++,
+    //     match: inlineRegex(new RegExp(
+    //         // The first [part] of the link
+    //         "^\\[(" + LINK_INSIDE + ")\\]" +
+    //         // The [ref] target of the link
+    //         "\\s*\\[([^\\]]*)\\]"
+    //     )),
+    //     parse: function(capture, parse, state) {
+    //         return parseRef(capture, state, {
+    //             type: "link",
+    //             content: parse(capture[1], state)
+    //         });
+    //     },
+    //     react: null,
+    //     html: null
+    // },
+    // refimage: {
+    //     order: currOrder++,
+    //     match: inlineRegex(new RegExp(
+    //         // The first [part] of the link
+    //         "^!\\[(" + LINK_INSIDE + ")\\]" +
+    //         // The [ref] target of the link
+    //         "\\s*\\[([^\\]]*)\\]"
+    //     )),
+    //     parse: function(capture, parse, state) {
+    //         return parseRef(capture, state, {
+    //             type: "image",
+    //             alt: capture[1]
+    //         });
+    //     },
+    //     react: null,
+    //     html: null
+    // },
     em: {
         order: currOrder /* same as strong/u */,
         match: inlineRegex(

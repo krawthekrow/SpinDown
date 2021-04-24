@@ -1,5 +1,7 @@
 const config = require('../../config.js').PLUGINS.BRIDGE;
 const Channel = require('../Channel.js');
+const Message = require('../Message.js');
+const User = require('../User.js');
 const formatting = require('../formatting.js');
 const colors = require('irc-colors');
 const net = require('net');
@@ -134,15 +136,41 @@ class BridgePlugin {
 		if (config.BLACKLIST.includes(user.id)) {
 			return;
 		}
-		const downstreams = this.getDownstreams(chan);
-		for (const ochan of downstreams) {
-			// convertMessage takes a Message, but
-			// processedMsg is a string
-			const processedMsg = this.convertMessage(
-				chan, ochan, msg.content, msg.attachments
-			);
-			this.relayMsg(chan, ochan, user, processedMsg);
+		const doRelay = (replyContent) => {
+			const downstreams = this.getDownstreams(chan);
+			for (const ochan of downstreams) {
+				const processedMsg = this.convertMessage(
+					chan, ochan, msg.content, msg.attachments
+				);
+				if (replyContent != null) {
+					const processedReply = '> ' + this.convertMessage(
+						chan, ochan, replyContent, []
+					);
+					this.relayMsg(chan, ochan, user, processedReply, true);
+				}
+				this.relayMsg(chan, ochan, user, processedMsg);
+			}
+		};
+		if (msg.type == Message.TYPE_DISCORD) {
+			const replyRef = msg.val.reference;
+			if (replyRef != null && replyRef.messageID != null) {
+				chan.val.messages.fetch(replyRef.messageID).then(
+					(replyMsg) => {
+						let replyNick = 'unknown';
+						if (replyMsg.author != null) {
+							replyNick = new User(
+								User.TYPE_DISCORD,
+								replyMsg.author
+							).getNick(chan);
+						}
+						const nickPrepend = this.makeNickPrepend(chan, replyNick);
+						doRelay(`${nickPrepend} ${replyMsg.content}`);
+					}
+				).catch(console.error);
+				return;
+			}
 		}
+		doRelay(null);
 	}
 	handleAction(user, chan, msg) {
 		if (config.BLACKLIST.includes(user.id)) {
@@ -150,8 +178,6 @@ class BridgePlugin {
 		}
 		const downstreams = this.getDownstreams(chan);
 		for (const ochan of downstreams) {
-			// convertMessage takes a Message, but
-			// processedMsg is a string
 			const processedMsg = this.convertMessage(
 				chan, ochan, msg, []
 			);
@@ -167,8 +193,6 @@ class BridgePlugin {
 		}
 		const downstreams = this.getDownstreams(chan);
 		for (const ochan of downstreams) {
-			// convertMessage takes a Message, but
-			// processedMsg is a string
 			const processedMsg = this.convertMessage(
 				chan, ochan, msg.content, []
 			);
@@ -194,20 +218,28 @@ class BridgePlugin {
 		const c = '\x03';
 		return `${c}${color.toString().padStart(2, '0')}${colors.bold(noHighlight)}${c}`;
 	}
+	makeNickPrepend(chan, nick) {
+		switch (chan.type) {
+		case Channel.TYPE_IRC:
+			return `[${this.formatIrcNick(nick)}]`;
+		case Channel.TYPE_DISCORD:
+			return `[**${nick}**]`;
+		default:
+			throw new Error('unrecognized channel type');
+		}
+	}
 	relayAction(fromChan, toChan, user, msg) {
 		const nick = user.getNick(fromChan);
-		let nickPrepend;
+		const nickPrepend = this.makeNickPrepend(toChan, nick);
 		switch (toChan.type) {
 		case Channel.TYPE_IRC:
-			nickPrepend = `*${this.formatIrcNick(nick)}`;
 			this.env.sendMessageNoBridge(
 				toChan, `${nickPrepend} ${msg}`
 			);
 			break;
 		case Channel.TYPE_DISCORD:
-			nickPrepend = `**${nick}**`;
 			this.env.sendMessageNoBridge(
-				toChan, `[${nickPrepend}] *${msg}*`
+				toChan, `${nickPrepend} *${msg}*`
 			);
 			break;
 		default:
@@ -216,41 +248,39 @@ class BridgePlugin {
 	}
 	relayEdit(fromChan, toChan, user, msg) {
 		const nick = user.getNick(fromChan);
-		let nickPrepend;
+		const nickPrepend = this.makeNickPrepend(toChan, nick);
 		switch (toChan.type) {
 		case Channel.TYPE_IRC:
-			nickPrepend = `*${this.formatIrcNick(nick)}`;
 			this.env.sendMessageNoBridge(
 				toChan, `${nickPrepend} ${msg}`
 			);
 			break;
 		case Channel.TYPE_DISCORD:
-			nickPrepend = `**${nick}**`;
 			this.env.sendMessageNoBridge(
-				toChan, `[${nickPrepend}] *${msg}*`
+				toChan, `${nickPrepend} *${msg}*`
 			);
 			break;
 		default:
 			throw new Error('unrecognized channel type');
 		}
 	}
-	relayMsg(fromChan, toChan, user, msg) {
+	relayMsg(fromChan, toChan, user, msg, isReply = false) {
 		const nick = user.getNick(fromChan);
-		let nickPrepend;
-		switch (toChan.type) {
-		case Channel.TYPE_IRC:
-			nickPrepend = `[${this.formatIrcNick(nick)}]`;
-			break;
-		case Channel.TYPE_DISCORD:
-			nickPrepend = `[**${nick}**]`;
-			break;
-		default:
-			throw new Error('unrecognized channel type');
+		const nickPrepend = this.makeNickPrepend(toChan, nick);
+		if (isReply) {
+			const line = `${nickPrepend} ${msg.split('\n').join(' ')}`;
+			const lineSplit = line.substring(0, BridgePlugin.IRC_MSG_MAX_LEN);
+			this.env.sendMessageNoBridge(
+				toChan, lineSplit
+			);
+			return;
 		}
 		switch (toChan.type) {
 		case Channel.TYPE_IRC:
 			const lines = msg.split('\n');
-			if (lines.length > 5 || msg.length > BridgePlugin.IRC_MSG_MAX_LEN * 4) {
+			const needPastebin =
+				lines.length > 5 || msg.length > BridgePlugin.IRC_MSG_MAX_LEN * 4;
+			if (needPastebin) {
 				const tcpst = net.createConnection(7777, 'tcp.st');
 				tcpst.on('data', (data) => {
 					const tcpstLines = data.toString().split('\n');
@@ -293,6 +323,9 @@ class BridgePlugin {
 					this.env.sendMessageNoBridge(
 						toChan, lineSplit
 					);
+					if (isReply) {
+						return;
+					}
 				}
 			}
 			break;

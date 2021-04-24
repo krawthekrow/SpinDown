@@ -233,7 +233,7 @@ class Channel {
 					}
 					continue;
 				}
-				if ('*_~`:'.includes(str[index])) {
+				if ('*_~`:[]'.includes(str[index])) {
 					newstr += `\\${str[index]}`;
 					index++;
 					continue;
