@@ -223,7 +223,8 @@ class BridgePlugin {
 		case Channel.TYPE_IRC:
 			return `[${this.formatIrcNick(nick)}]`;
 		case Channel.TYPE_DISCORD:
-			return `[**${nick}**]`;
+			// prevent highlights in bridged discord replies
+			return `[**${this.ircDisableHighlight(nick)}**]`;
 		default:
 			throw new Error('unrecognized channel type');
 		}
