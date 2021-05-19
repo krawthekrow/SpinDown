@@ -14,6 +14,8 @@ function mdNodeToIRC(node) {
       return colors.bold(content);
     case 'u':
       return colors.underline(content);
+    case 'del':
+      return `~~${content}~~`;
     case 'spoiler':
       const c = '\x03';
       return `${c}01,01${content}${c}`;
