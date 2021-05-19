@@ -832,6 +832,10 @@ class PowderPlugin {
 				values.push([saveId, updatedTime]);
 			}
 			this.saveCache();
+			if (values.length == 0) {
+				onComplete();
+				return false;
+			}
 			this.db.run(
 				`INSERT OR IGNORE INTO fp_cache(save_id, last_updated, reported) VALUES ${placeholders.join(',')}`,
 				[].concat(...values),
@@ -896,7 +900,7 @@ class PowderPlugin {
 				handleUpdates(0, []);
 				return false;
 			}
-			if (!body.Saves) {
+			if (!body || !body.Saves) {
 				console.error('PowderPlugin: no Saves in body');
 				console.error(body);
 				handleUpdates(0, []);
