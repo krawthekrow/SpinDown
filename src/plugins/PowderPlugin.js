@@ -601,16 +601,17 @@ class PowderPlugin {
 			break;
 		case 'fp':
 			this.getFpUpdates((fpUpdates) => {
-				for (const save of fpUpdates) {
-					this.env.sendMessage(
-						new Channel(Channel.TYPE_IRC,
-							new Channel.IrcChannelData(
-								'#powder-subframe',
-								this.env.ircCli
-							)
-						),
-						`Subframe FP Update; http://tpt.io/~${save.ID}`
-					);
+				if ('SUBFRAME_CHANNEL' in config && config.SUBFRAME_CHANNEL != null) {
+					for (const save of fpUpdates) {
+						this.env.sendMessage(
+							Channel.fromString(
+								config.SUBFRAME_CHANNEL,
+								this.env.ircCli,
+								this.env.discordCli
+							),
+							`Subframe FP Update; http://tpt.io/~${save.ID}`
+						);
+					}
 				}
 				this.doTaskAsync();
 			});
