@@ -218,13 +218,27 @@ class BridgePlugin {
 		const c = '\x03';
 		return `${c}${color.toString().padStart(2, '0')}${colors.bold(noHighlight)}${c}`;
 	}
+	escapeSpecialChars(nick) {
+		let escaped = '';
+		for (const c of nick) {
+			if ('-_[]{}\\`|'.indexOf(c) != -1) {
+				escaped += `\\${c}`;
+				continue;
+			}
+			escaped += c;
+		}
+		return escaped;
+	}
 	makeNickPrepend(chan, nick) {
 		switch (chan.type) {
 		case Channel.TYPE_IRC:
 			return `[${this.formatIrcNick(nick)}]`;
 		case Channel.TYPE_DISCORD:
 			// prevent highlights in bridged discord replies
-			return `[**${this.ircDisableHighlight(nick)}**]`;
+			const sanitizedNick = this.escapeSpecialChars(
+				this.ircDisableHighlight(nick)
+			);
+			return `[**${sanitizedNick}**]`;
 		default:
 			throw new Error('unrecognized channel type');
 		}
@@ -324,9 +338,6 @@ class BridgePlugin {
 					this.env.sendMessageNoBridge(
 						toChan, lineSplit
 					);
-					if (isReply) {
-						return;
-					}
 				}
 			}
 			break;

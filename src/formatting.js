@@ -25,12 +25,13 @@ function mdNodeToIRC(node) {
 }
 
 function formatFromDiscordToIRC(text) {
-  text = text.replace('¯\\_(ツ)_/¯', '¯\\\\\\_(ツ)_/¯');
+  text = text.replace(/¯\\_\(ツ\)_\/¯/g, '¯\\\\\\_(ツ)\\_/¯');
   const markdownAST = SimpleMarkdown.defaultInlineParse(text);
   return markdownAST.map(mdNodeToIRC).join('');
 }
 
 function formatFromIRCToDiscord(text) {
+  text = text.replace(/\x08/g, '');
   const blocks = ircFormatting.parse(text).map(block => ({
     // Consider reverse as italic, some IRC clients use that
     ...block,
