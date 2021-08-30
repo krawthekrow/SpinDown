@@ -507,6 +507,7 @@ class BridgePlugin {
 			}
 			if (match.length != 6)
 				throw new Error('match should have length 5');
+			re.lastIndex -= match[5].length;
 			if (match[2] == '' && match[4] == '') {
 				newmsg += msg.substring(index, re.lastIndex);
 				index = re.lastIndex;
@@ -514,15 +515,34 @@ class BridgePlugin {
 			}
 
 			const nick = match[3].toLowerCase();
-			const encoded = chan.encodeMention(nick);
-			if (encoded == null) {
+			if (config.MENTION_BLACKLIST.indexOf(nick) != -1) {
 				newmsg += msg.substring(index, re.lastIndex);
 				index = re.lastIndex;
+				continue;
 			}
-			else {
-				newmsg += msg.substring(index, match.index);
-				newmsg += encoded;
-				newmsg += match[5];
+
+			let aliases = [nick];
+			for (const aliasesCandidate of config.MENTION_ALIASES) {
+				if (aliasesCandidate.indexOf(nick) != -1) {
+					aliases = aliasesCandidate;
+					break;
+				}
+			}
+
+			let success = false;
+			for (const alias of aliases) {
+				const encoded = chan.encodeMention(alias);
+				if (encoded != null) {
+					newmsg += msg.substring(index, match.index);
+					newmsg += match[1];
+					newmsg += encoded;
+					index = re.lastIndex;
+					success = true;
+					break;
+				}
+			}
+			if (!success) {
+				newmsg += msg.substring(index, re.lastIndex);
 				index = re.lastIndex;
 			}
 		}

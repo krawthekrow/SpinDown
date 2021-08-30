@@ -276,7 +276,7 @@ class Channel {
 		if (this.val.type == 'dm') {
 			return nick;
 		}
-		// Channel.fromString('discord:powder-subframe#subframe', null, this.discordCli).val.guild.members.fetch().then(console.log)
+		nick = nick.toLowerCase();
 		let memberMatches = this.val.members.filter(member => {
 			return member.displayName.toLowerCase() == nick ||
 				member.user.username.toLowerCase() == nick ||
