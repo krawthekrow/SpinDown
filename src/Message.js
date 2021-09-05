@@ -18,7 +18,7 @@ class Message {
 		case Message.TYPE_IRC:
 			return [];
 		case Message.TYPE_DISCORD:
-			return this.val.attachments.array();
+			return [...this.val.attachments.values()];
 		default:
 			throw new Error('unrecognized message type');
 		}

@@ -38,7 +38,7 @@ class Channel {
 				throw new Error('zero-length channel name');
 			return this.name[0] != '#';
 		case Channel.TYPE_DISCORD:
-			return 'username' in this.val || this.val.type == 'dm';
+			return 'username' in this.val || this.val.type == 'DM';
 		default:
 			throw new Error('unrecognized channel type');
 		}

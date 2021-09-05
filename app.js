@@ -61,14 +61,24 @@ function onClientConnect() {
 	fetchAllMembers(guilds);
 }
 
-discordCli = new Discord.Client();
+discordCli = new Discord.Client({
+	partials: [
+		'CHANNEL',
+	],
+	intents: [
+		Discord.Intents.FLAGS.GUILDS,
+		Discord.Intents.FLAGS.GUILD_MEMBERS,
+		Discord.Intents.FLAGS.GUILD_MESSAGES,
+		Discord.Intents.FLAGS.DIRECT_MESSAGES,
+	],
+});
 
 discordCli.on('ready', () => {
 	console.log(`Connected to Discord as ${discordCli.user.tag}!`);
 	discordConnected = true;
 	onClientConnect();
 });
-discordCli.on('message', msg => {
+discordCli.on('messageCreate', msg => {
 	if (!pluginsManager)
 		return;
 	try{

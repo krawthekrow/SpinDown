@@ -31,7 +31,7 @@ class User {
 			return this.val.nick;
 		case User.TYPE_DISCORD:
 			if (chan.val.guild != null)
-				return chan.val.guild.member(this.val).displayName;
+				return chan.val.guild.members.cache.get(this.val.id).displayName;
 			return this.val.username;
 		default:
 			throw new Error('unrecognized user type');

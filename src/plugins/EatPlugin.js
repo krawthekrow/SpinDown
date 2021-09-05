@@ -144,7 +144,7 @@ class EatPlugin{
 				);
 				const teaserRole =
 					chan.getRoleByName(config.TEASER_ROLE);
-				const teasers = teaserRole.members.array();
+				const teasers = [...teaserRole.members.values()];
 				const newTeasers = teasers.filter(
 					(teaser) => {
 						const teaserUser = new User(

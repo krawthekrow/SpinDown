@@ -153,8 +153,8 @@ class BridgePlugin {
 		};
 		if (msg.type == Message.TYPE_DISCORD) {
 			const replyRef = msg.val.reference;
-			if (replyRef != null && replyRef.messageID != null) {
-				chan.val.messages.fetch(replyRef.messageID).then(
+			if (replyRef != null && replyRef.messageId != null) {
+				chan.val.messages.fetch(replyRef.messageId).then(
 					(replyMsg) => {
 						let replyNick = 'unknown';
 						if (replyMsg.author != null) {
@@ -404,7 +404,7 @@ class BridgePlugin {
 				index = re.lastIndex;
 				continue;
 			}
-			const member = chan.val.guild.member(user);
+			const member = chan.val.guild.members.cache.get(user.id);
 			if (member === undefined) {
 				newmsg += msg.substring(index, re.lastIndex);
 				index = re.lastIndex;
