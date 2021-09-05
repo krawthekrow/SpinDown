@@ -204,6 +204,10 @@ class PluginsManager {
 		}
 	}
 	handleMessage(user, chan, msg) {
+		// don't support thread creation for now
+		if (msg.type == Message.TYPE_DISCORD && msg.val.type == 'THREAD_STARTER_MESSAGE')
+			return false;
+
 		if (User.equal(this.getUser(chan.type), user))
 			return false;
 		for (const [pluginName, plugin] of this.plugins) {
@@ -211,6 +215,11 @@ class PluginsManager {
 				plugin.handleFullMessage(user, chan, msg);
 			if ('handleMessage' in plugin)
 				plugin.handleMessage(user, chan, msg.content);
+		}
+
+		// don't support commands in public threads for now
+		if (chan.type == Channel.TYPE_DISCORD && chan.val.type == 'GUILD_PUBLIC_THREAD') {
+			return false;
 		}
 
 		const returnChannel = Channel.getReplyChan(chan, user);
