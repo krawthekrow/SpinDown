@@ -184,6 +184,8 @@ class Channel {
 				throw new Error('expected match of length 3');
 
 			const genericChan = [...discordCli.channels.cache.values()].find(chan => {
+				if (chan.type != 'GUILD_TEXT')
+					return false;
 				if (chan.guild == null)
 					return match[1] == '' && chan.name == match[2];
 				return (
