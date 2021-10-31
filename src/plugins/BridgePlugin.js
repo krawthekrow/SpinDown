@@ -6,6 +6,8 @@ const formatting = require('../formatting.js');
 const colors = require('irc-colors');
 const net = require('net');
 
+const ZWS = '\u200b';
+
 class BridgePlugin {
 	constructor(env) {
 		this.env = env;
@@ -157,14 +159,33 @@ class BridgePlugin {
 				chan.val.messages.fetch(replyRef.messageId).then(
 					(replyMsg) => {
 						let replyNick = 'unknown';
+						let isSelf = false;
 						if (replyMsg.author != null) {
-							replyNick = new User(
+							const replyUser = new User(
 								User.TYPE_DISCORD,
 								replyMsg.author
-							).getNick(chan);
+							);
+							isSelf = replyUser.getIsSelf(
+								this.env.ircCli, this.env.discordCli
+							);
+							replyNick = replyUser.getNick(chan);
 						}
-						const nickPrepend = this.makeNickPrepend(chan, replyNick);
-						doRelay(`${nickPrepend} ${replyMsg.content}`);
+						let replyStr = replyMsg.content;
+						const openSqIndex = replyStr.indexOf('[');
+						const closeSqIndex = replyStr.indexOf(']');
+						const zwsIndex = replyStr.indexOf(ZWS);
+						const botReplyDetect =
+							openSqIndex == 0 &&
+							closeSqIndex != -1 && zwsIndex != -1 &&
+							openSqIndex < zwsIndex && zwsIndex < closeSqIndex;
+						if (isSelf && botReplyDetect) {
+							replyStr = `${replyStr.replace(ZWS, '')}`;
+						}
+						else {
+							const nickPrepend = this.makeNickPrepend(chan, replyNick);
+							replyStr = `${nickPrepend} ${replyStr}`;
+						}
+						doRelay(replyStr);
 					}
 				).catch(console.error);
 				return;
@@ -203,8 +224,7 @@ class BridgePlugin {
 	ircDisableHighlight(nick) {
 		if (nick.length < 2)
 			return nick;
-		const zws = '\u200b';
-		return `${nick[0]}${zws}${nick.slice(1)}`
+		return `${nick[0]}${ZWS}${nick.slice(1)}`
 	}
 	formatIrcNick(nick) {
 		// const rcolors = [ 19, 20, 22, 24, 25, 26, 27, 28, 29 ];
