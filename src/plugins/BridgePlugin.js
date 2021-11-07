@@ -525,16 +525,12 @@ class BridgePlugin {
 				newmsg += msg.substr(index);
 				break;
 			}
-			if (match.length != 6)
+			if (match.length != 3)
 				throw new Error('match should have length 5');
-			re.lastIndex -= match[5].length;
-			if (match[2] == '' && match[4] == '') {
-				newmsg += msg.substring(index, re.lastIndex);
-				index = re.lastIndex;
-				continue;
-			}
 
-			const nick = match[3].toLowerCase();
+			const nick = (
+				(match[1] === undefined) ? match[2] : match[1]
+			).toLowerCase();
 			if (config.MENTION_BLACKLIST.indexOf(nick) != -1) {
 				newmsg += msg.substring(index, re.lastIndex);
 				index = re.lastIndex;
@@ -554,7 +550,6 @@ class BridgePlugin {
 				const encoded = chan.encodeMention(alias);
 				if (encoded != null) {
 					newmsg += msg.substring(index, match.index);
-					newmsg += match[1];
 					newmsg += encoded;
 					index = re.lastIndex;
 					success = true;
@@ -597,7 +592,9 @@ BridgePlugin.USER_MENTION_REGEX = new RegExp('<@!?([0-9]+)>', 'g');
 BridgePlugin.ROLE_MENTION_REGEX = new RegExp('<@&([0-9]+)>', 'g');
 BridgePlugin.CHANNEL_MENTION_REGEX = new RegExp('<#([0-9]+)>', 'g');
 
-BridgePlugin.PLAIN_MENTION_REGEX = new RegExp('(^|\\s)(@?)([^\\s,:]+)([:,]?)(\\s|$)', 'g');
+// First half accepts comma/colon-based pings at the start of a message.
+// Second half accepts @-based pings anywhere in a message.
+BridgePlugin.PLAIN_MENTION_REGEX = new RegExp('(?:^([^\\s,:]+)[,:]|(?<=^|\\s)@([^\\s]+))(?=\\s|$)', 'g');
 
 BridgePlugin.IRC_MSG_MAX_LEN = 400;
 
