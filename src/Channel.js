@@ -249,27 +249,37 @@ class Channel {
 		}
 	}
 	getRoleByName(roleName) {
-		const roleMatches = this.val.guild.roles.cache.filter((role) => {
-			return role.name == roleName;
+		return new Promise((resolve, reject) => {
+			this.val.guild.roles.fetch().then(roles => {
+				const roleMatches = roles.filter((role) => {
+					return role.name == roleName;
+				});
+				if (roleMatches.size != 1) {
+					resolve(null);
+				}
+				resolve(roleMatches.first());
+			}).catch(reject);
 		});
-		if (roleMatches.size != 1) {
-			return null;
-		}
-		return roleMatches.first();
 	}
 	encodeRoleMention(roleName) {
-		const role = this.getRoleByName(roleName);
-		if (role == null) {
-			return null;
-		}
-		return `<@&${role.id}>`;
+		return new Promise((resolve, reject) => {
+			this.getRoleByName(roleName).then(role => {
+				if (role == null) {
+					resolve(null);
+				}
+				resolve(`<@&${role.id}>`);
+			}).catch(reject);
+		});
 	}
 	getRoleMembers(roleName) {
-		const role = this.getRoleByName(roleName);
-		if (role == null) {
-			return null;
-		}
-		return role.members;
+		return new Promise((resolve, reject) => {
+			this.getRoleByName(roleName).then(role => {
+				if (role == null) {
+					resolve(null);
+				}
+				resolve([...role.members.values()]);
+			}).catch(reject);
+		});
 	}
 	encodeMention(nick, allowShorthand = true) {
 		if (this.type != Channel.TYPE_DISCORD) {

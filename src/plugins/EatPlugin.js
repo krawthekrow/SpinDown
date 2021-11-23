@@ -60,7 +60,18 @@ class EatPlugin{
 				this.setTeaserQ(returnChannel, sender, q);
 			},
 			'rotateteaser': (returnChannel, argstring, sender) => {
-				this.rotateTeaser(returnChannel, true);
+				let targetChan = returnChannel;
+				if (returnChannel.isQuery && argstring != '') {
+					targetChan = this.env.parseChanFromUser(
+						returnChannel.type,
+						argstring,
+						returnChannel,
+						sender
+					);
+				}
+				this.rotateTeaser(targetChan, false);
+				this.env.sendHighlight(returnChannel, sender,
+					`Teasers rotated!`);
 			},
 		};
 		this.updateInterval = setInterval(this.update.bind(this), 1000 * 30);
@@ -131,6 +142,57 @@ class EatPlugin{
 		);
 	}
 	rotateTeaser(chan, testing = false) {
+		const doRotateTeasers = (usedTeasers, teasers) => {
+			const newTeasers = teasers.filter(
+				(teaser) => {
+					const teaserUser = new User(
+						User.TYPE_DISCORD,
+						teaser.user
+					);
+					return !usedTeasers.includes(teaserUser.id);
+				}
+			);
+			const teasersPool =
+				(newTeasers.length == 0) ?
+				teasers : newTeasers;
+			const teaser = teasersPool[
+				Math.floor(Math.random() * teasersPool.length)
+			].user;
+			if (!testing) {
+				teaser.createDM().then((dmChannel) => {
+					const teaserDm = new Channel(
+						Channel.TYPE_DISCORD,
+						teaser.dmChannel
+					);
+
+					this.env.sendMessage(teaserDm, `Write a question for tomorrow's teaspin! Reply with the following command:`);
+					this.env.sendMessage(teaserDm, `\`tease <question>\``);
+					this.env.sendMessage(teaserDm, `For example:`);
+					this.env.sendMessage(teaserDm, `\`tease What is your favorite color?\``);
+					this.env.sendMessage(teaserDm, `Don't fret over it! If you change your mind later, you can delete your question by typing \`tease\` on its own.`);
+				}).catch(console.error);
+
+				const teaserUser = new User(
+					User.TYPE_DISCORD,
+					teaser
+				);
+				this.db.run(`
+					INSERT INTO teasers_log
+					(username, question, time_pinged)
+					VALUES (?, "", ?)
+				`, [teaserUser.id, new Date().getTime()]);
+				this.db.run(`
+					DELETE FROM teasers_log
+					WHERE rowid IN
+					(
+						SELECT rowid FROM teasers_log
+						ORDER BY time_pinged DESC
+						LIMIT 100
+						OFFSET ${config.TEASER_MIN_INTERVAL}
+					)
+				`);
+			}
+		};
 		this.db.all(
 			`SELECT username FROM teasers_log`,
 			[],
@@ -142,77 +204,29 @@ class EatPlugin{
 				const usedTeasers = rows.map(
 					(row) => row['username']
 				);
-				const teaserRole =
-					chan.getRoleByName(config.TEASER_ROLE);
-				const teasers = [...teaserRole.members.values()];
-				const newTeasers = teasers.filter(
-					(teaser) => {
-						const teaserUser = new User(
-							User.TYPE_DISCORD,
-							teaser.user
-						);
-						return !usedTeasers.includes(teaserUser.id);
-					}
-				);
-				const teasersPool =
-					(newTeasers.length == 0) ?
-					teasers : newTeasers;
-				const teaser = teasersPool[
-					Math.floor(Math.random() * teasersPool.length)
-				].user;
-				if (!testing) {
-					teaser.createDM().then((dmChannel) => {
-						const teaserDm = new Channel(
-							Channel.TYPE_DISCORD,
-							teaser.dmChannel
-						);
-
-						this.env.sendMessage(teaserDm, `Write a question for tomorrow's teaspin! Reply with the following command:`);
-						this.env.sendMessage(teaserDm, `\`tease <question>\``);
-						this.env.sendMessage(teaserDm, `For example:`);
-						this.env.sendMessage(teaserDm, `\`tease What is your favorite color?\``);
-						this.env.sendMessage(teaserDm, `Don't fret over it! If you change your mind later, you can delete your question by typing \`tease\` on its own.`);
-					});
-
-					const teaserUser = new User(
-						User.TYPE_DISCORD,
-						teaser
-					);
-					this.db.run(`
-						INSERT INTO teasers_log
-						(username, question, time_pinged)
-						VALUES (?, "", ?)
-					`, [teaserUser.id, new Date().getTime()]);
-					this.db.run(`
-						DELETE FROM teasers_log
-						WHERE rowid IN
-						(
-							SELECT rowid FROM teasers_log
-							ORDER BY time_pinged DESC
-							LIMIT 100
-							OFFSET ${config.TEASER_MIN_INTERVAL}
-						)
-					`);
-				}
+				chan.getRoleMembers(config.TEASER_ROLE).then(teasers => {
+					doRotateTeasers(usedTeasers, teasers);
+				}).catch(console.error);
 			}
 		);
 	}
 	dailyReminder(chan, echoChans, callback, errCallback, testing = false) {
 		const sendReminder = (periodicQ, oneOffSource, oneOffQ) => {
-			// this.env.sendMessage(chan, `${chan.encodeMention(config.HIGHLIGHT_USER)} Don't forget to eat!!!${testing ? ' [TESTING]' : ''}`);
-			this.env.sendMessage(chan, `${chan.encodeRoleMention(config.HIGHLIGHT_ROLE)} Question time!${testing ? ' [TESTING]' : ''}`);
-			const periodicMsg = `Random periodic: ${periodicQ}`;
-			const oneOffMsg = `Random(?) one-off (s${oneOffSource}): ${oneOffQ}`;
-			this.env.sendMessage(chan, periodicMsg);
-			this.env.sendMessage(chan, oneOffMsg);
-			for (const echoChan of echoChans) {
-				this.env.sendMessage(echoChan, periodicMsg);
-				this.env.sendMessage(echoChan, oneOffMsg);
-			}
+			chan.encodeRoleMention(config.HIGHLIGHT_ROLE).then(mention => {
+				this.env.sendMessage(chan, `${mention} Question time!${testing ? ' [TESTING]' : ''}`);
+				const periodicMsg = `Random periodic: ${periodicQ}`;
+				const oneOffMsg = `Random(?) one-off (s${oneOffSource}): ${oneOffQ}`;
+				this.env.sendMessage(chan, periodicMsg);
+				this.env.sendMessage(chan, oneOffMsg);
+				for (const echoChan of echoChans) {
+					this.env.sendMessage(echoChan, periodicMsg);
+					this.env.sendMessage(echoChan, oneOffMsg);
+				}
 
-			if (!testing) {
-				this.rotateTeaser(chan);
-			}
+				if (!testing) {
+					this.rotateTeaser(chan);
+				}
+			}).catch(console.error);
 		};
 
 		const sendReminderWithTeaser = (
