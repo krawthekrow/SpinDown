@@ -1459,23 +1459,23 @@ var defaultRules /* : DefaultRules */ = {
     //     react: null,
     //     html: null
     // },
-    // url: {
-    //     order: currOrder++,
-    //     match: inlineRegex(/^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/),
-    //     parse: function(capture, parse, state) {
-    //         return {
-    //             type: "link",
-    //             content: [{
-    //                 type: "text",
-    //                 content: capture[1]
-    //             }],
-    //             target: capture[1],
-    //             title: undefined
-    //         };
-    //     },
-    //     react: null,
-    //     html: null
-    // },
+    url: {
+        order: currOrder++,
+        match: inlineRegex(/^(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/),
+        parse: function(capture, parse, state) {
+            return {
+                type: "link",
+                content: [{
+                    type: "text",
+                    content: capture[1]
+                }],
+                target: capture[1],
+                title: undefined
+            };
+        },
+        react: null,
+        html: null
+    },
     // link: {
     //     order: currOrder++,
     //     match: inlineRegex(new RegExp(
