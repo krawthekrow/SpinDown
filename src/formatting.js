@@ -4,6 +4,8 @@ const ircFormatting = require('irc-formatting');
 const SimpleMarkdown = require('./PatchedSimpleMarkdown.js');
 const colors = require('irc-colors');
 
+const ZWS = '\u200b';
+
 function mdNodeToIRC(node) {
   let { content } = node;
   if (Array.isArray(content)) content = content.map(mdNodeToIRC).join('');
@@ -18,7 +20,7 @@ function mdNodeToIRC(node) {
       return `~~${content}~~`;
     case 'spoiler':
       const c = '\x03';
-      return `${c}01,01${content}${c}`;
+      return `${c}01,01${content}${c}${ZWS}`;
     default:
       return content;
   }
