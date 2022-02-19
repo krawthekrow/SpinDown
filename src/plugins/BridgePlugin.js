@@ -592,9 +592,9 @@ BridgePlugin.USER_MENTION_REGEX = new RegExp('<@!?([0-9]+)>', 'g');
 BridgePlugin.ROLE_MENTION_REGEX = new RegExp('<@&([0-9]+)>', 'g');
 BridgePlugin.CHANNEL_MENTION_REGEX = new RegExp('<#([0-9]+)>', 'g');
 
-// First half accepts comma/colon-based pings at the start of a message.
+// First half accepts colon-based pings at the start of a message.
 // Second half accepts @-based pings anywhere in a message.
-BridgePlugin.PLAIN_MENTION_REGEX = new RegExp('(?:^([^\\s,:]+)[,:]|(?<=^|\\s)@([^\\s]+))(?=\\s|$)', 'g');
+BridgePlugin.PLAIN_MENTION_REGEX = new RegExp('(?:^([^\\s:]+)[:]|(?<=^|\\s)@([^\\s]+))(?=\\s|$)', 'g');
 
 BridgePlugin.IRC_MSG_MAX_LEN = 400;
 
