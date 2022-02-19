@@ -537,20 +537,45 @@ class BridgePlugin {
 				continue;
 			}
 
-			let aliases = [nick];
+			const lastChar = nick[nick.length - 1];
+			const lastCharIsSymbol = /[^a-zA-Z0-9]/.test(lastChar);
+			const nickMinusOne = nick.substring(0, nick.length - 1);
+			let aliases = [{
+				nick: nick,
+				extra: '',
+			}];
+			if (lastCharIsSymbol) {
+				aliases.push({
+					nick: nickMinusOne,
+					extra: lastChar,
+				});
+			}
 			for (const aliasesCandidate of config.MENTION_ALIASES) {
 				if (aliasesCandidate.indexOf(nick) != -1) {
-					aliases = aliasesCandidate;
+					aliases = aliasesCandidate.map(alias => {return {
+						nick: alias,
+						extra: '',
+					};});
+					break;
+				}
+				if (
+					lastCharIsSymbol &&
+					aliasesCandidate.indexOf(nickMinusOne) != -1
+				) {
+					aliases = aliasesCandidate.map(alias => {return {
+						nick: alias,
+						extra: lastChar,
+					};});
 					break;
 				}
 			}
 
 			let success = false;
 			for (const alias of aliases) {
-				const encoded = chan.encodeMention(alias);
+				const encoded = chan.encodeMention(alias.nick);
 				if (encoded != null) {
 					newmsg += msg.substring(index, match.index);
-					newmsg += encoded;
+					newmsg += encoded + alias.extra;
 					index = re.lastIndex;
 					success = true;
 					break;
