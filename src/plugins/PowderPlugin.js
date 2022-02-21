@@ -52,6 +52,20 @@ class PowderPlugin {
 		this.cache = CACHE;
 		this.watch = WATCH;
 
+		this.channelWhitelist = [];
+		for (const chanSpec of config.CHANNEL_WHITELIST) {
+			this.channelWhitelist.push(Channel.fromString(
+				chanSpec, this.env.ircCli, this.env.discordCli
+			).id);
+		}
+
+		this.channelWeakWhitelist = [];
+		for (const chanSpec of config.CHANNEL_WEAK_WHITELIST) {
+			this.channelWeakWhitelist.push(Channel.fromString(
+				chanSpec, this.env.ircCli, this.env.discordCli
+			).id);
+		}
+
 		this.cmds = {
 			'puser': (returnChannel, argstring, sender) => {
 				// Testing command, don't use
@@ -974,13 +988,31 @@ class PowderPlugin {
 	handleMessage(user, chan, msg) {
 		if (chan.hasPowderBotInsecure())
 			return;
-		const match = /^~([\d]+)(?:\s|$)/.exec(msg);
-		if (match == null)
-			return;
-		if (match.length != 2)
-			throw new Error('match should have length 2');
-		const replyChan = Channel.getReplyChan(chan, user);
-		this.querySave(parseInt(match[1]), replyChan);
+		const allowAll = this.channelWhitelist.indexOf(chan.id) != -1;
+		const allowStrict =
+			allowAll || this.channelWeakWhitelist.indexOf(chan.id) != -1;
+		let saveId = null;
+		const tryMatchSaveId = (regex) => {
+			if (saveId != null)
+				return;
+			const match = regex.exec(msg);
+			if (match == null)
+				return;
+			if (match.length != 2)
+				throw new Error('match should have length 2');
+			saveId = match[1];
+		};
+		if (allowAll) {
+			tryMatchSaveId(/^~([\d]+)(?:\s|$)/);
+		}
+		if (allowStrict) {
+			tryMatchSaveId(/id:([\d]+)(?:\s|$)/);
+			tryMatchSaveId(/^~([\d]+)$/);
+		}
+		if (saveId != null) {
+			const replyChan = Channel.getReplyChan(chan, user);
+			this.querySave(parseInt(saveId), replyChan);
+		}
 	}
 	handleCommand(cmd, argstring, returnChannel, sender){
 		if(cmd in this.cmds){
