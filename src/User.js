@@ -30,8 +30,12 @@ class User {
 		case User.TYPE_IRC:
 			return this.val.nick;
 		case User.TYPE_DISCORD:
-			if (chan.val.guild != null)
-				return chan.val.guild.members.cache.get(this.val.id).displayName;
+			if (chan.val.guild != null) {
+				const member = chan.val.guild.members.cache.get(this.val.id);
+				if (member != undefined) {
+					return member.displayName;
+				}
+			}
 			return this.val.username;
 		default:
 			throw new Error('unrecognized user type');

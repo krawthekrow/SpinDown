@@ -250,7 +250,7 @@ class Channel {
 	}
 	getRoleByName(roleName) {
 		return new Promise((resolve, reject) => {
-			this.val.guild.roles.fetch().then(roles => {
+			this.val.guild.roles.fetch(null, {force: true}).then(roles => {
 				const roleMatches = roles.filter((role) => {
 					return role.name == roleName;
 				});
