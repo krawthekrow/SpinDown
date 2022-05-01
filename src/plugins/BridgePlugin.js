@@ -5,8 +5,66 @@ const User = require('../User.js');
 const formatting = require('../formatting.js');
 const colors = require('irc-colors');
 const net = require('net');
+const https = require('https');
+const FormData = require('form-data');
 
 const ZWS = '\u200b';
+
+function uploadTcpst(msg, onResp, onErr) {
+	const tcpst = net.createConnection(7777, 'tcp.st');
+	tcpst.on('data', (data) => {
+		const tcpstLines = data.toString().split('\n');
+		tcpst.write(msg);
+		tcpst.end();
+		let tcpstUrl = '';
+		for (const tcpstLine of tcpstLines) {
+			if (tcpstLine.startsWith('URL ')) {
+				onResp(tcpstLine.substring(4));
+				return;
+			}
+		}
+		console.error('could not find url line in tcpst');
+		console.error(data);
+		onErr();
+	});
+	tcpst.on('error', (err) => {
+		console.error(err);
+		onErr();
+	});
+}
+
+function uploadPybin(msg, onResp, onErr) {
+	const form = new FormData();
+	form.append('c', msg);
+
+	const req = https.request({
+		method: 'POST',
+		hostname: 'pybin.pw',
+		path: '/?u=1',
+		port: 443,
+		headers: form.getHeaders(),
+	});
+	form.pipe(req);
+	req.on('error', err => {
+		console.error(err);
+		onErr();
+	});
+	req.on('response', (res) => {
+		if (res.statusCode != 200) {
+			console.error(`pybin.pw error: status code ${res.statusCode}`);
+			onErr();
+			return;
+		}
+		let body = '';
+		res.on('data', (chunk) => {
+			body += chunk;
+		});
+		res.on('end', () => {
+			onResp(body.trim());
+		});
+	});
+	req.end();
+}
 
 class BridgePlugin {
 	constructor(env) {
@@ -316,29 +374,14 @@ class BridgePlugin {
 			const needPastebin =
 				lines.length > 5 || msg.length > BridgePlugin.IRC_MSG_MAX_LEN * 4;
 			if (needPastebin) {
-				const tcpst = net.createConnection(7777, 'tcp.st');
-				tcpst.on('data', (data) => {
-					const tcpstLines = data.toString().split('\n');
-					tcpst.write(msg);
-					tcpst.end();
-					let tcpstUrl = '';
-					for (const tcpstLine of tcpstLines) {
-						if (tcpstLine.startsWith('URL ')) {
-							tcpstUrl = tcpstLine.substring(4);
-							this.env.sendMessageNoBridge(
-								toChan, `${nickPrepend} [ ${tcpstUrl} ]`
-							);
-							return;
-						}
-					}
-					console.error('could not find url line in tcpst');
-					console.error(data);
-				});
-				tcpst.on('error', (err) => {
+				uploadPybin(msg, (url) => {
+					this.env.sendMessageNoBridge(
+						toChan, `${nickPrepend} [ ${url} ]`
+					);
+				}, () => {
 					this.env.sendMessageNoBridge(
 						toChan, `${nickPrepend} [ error contacting tcp.st - long message omitted ]`
 					);
-					console.error(err);
 				});
 				break;
 			}
