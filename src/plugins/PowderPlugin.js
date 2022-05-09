@@ -1006,7 +1006,7 @@ class PowderPlugin {
 			tryMatchSaveId(/^~([\d]+)(?:\s|$)/);
 		}
 		if (allowStrict) {
-			tryMatchSaveId(/id:([\d]+)(?:\s|$)/);
+			tryMatchSaveId(/(?<=^|\s)id:([\d]+)(?=\s|$)/);
 			tryMatchSaveId(/^~([\d]+)$/);
 		}
 		if (saveId != null) {
