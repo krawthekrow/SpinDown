@@ -276,7 +276,7 @@ class BridgePlugin {
 				chan, ochan, msg.content, []
 			);
 			const c = '\x03';
-			this.relayMsg(chan, ochan, user, `${c}15(edit)${c} ${processedMsg}`);
+			this.relayMsg(chan, ochan, user, processedMsg, false, true);
 		}
 	}
 	ircDisableHighlight(nick) {
@@ -357,7 +357,7 @@ class BridgePlugin {
 			throw new Error('unrecognized channel type');
 		}
 	}
-	relayMsg(fromChan, toChan, user, msg, isReply = false) {
+	relayMsg(fromChan, toChan, user, msg, isReply = false, isEdit = false) {
 		const nick = user.getNick(fromChan);
 		const nickPrepend = this.makeNickPrepend(toChan, nick);
 		if (isReply) {
@@ -368,6 +368,16 @@ class BridgePlugin {
 			);
 			return;
 		}
+		const c = '\x03';
+		let editPrefix = isEdit ? `${c}15(edit)${c} ` : '';
+		const decorateMessage = (processedMsg) => {
+			return `${nickPrepend} ${editPrefix}${processedMsg}`;
+		};
+		const doSendMessage = (processedMsg) => {
+			this.env.sendMessageNoBridge(
+				toChan, decorateMessage(processedMsg)
+			);
+		};
 		switch (toChan.type) {
 		case Channel.TYPE_IRC:
 			const lines = msg.split('\n');
@@ -375,13 +385,9 @@ class BridgePlugin {
 				lines.length > 5 || msg.length > BridgePlugin.IRC_MSG_MAX_LEN * 4;
 			if (needPastebin) {
 				uploadPybin(msg, (url) => {
-					this.env.sendMessageNoBridge(
-						toChan, `${nickPrepend} [ ${url} ]`
-					);
+					doSendMessage(`[ ${url} ]`);
 				}, () => {
-					this.env.sendMessageNoBridge(
-						toChan, `${nickPrepend} [ error contacting tcp.st - long message omitted ]`
-					);
+					doSendMessage(`[ error contacting pybin - long message omitted ]`);
 				});
 				break;
 			}
@@ -390,7 +396,7 @@ class BridgePlugin {
 				for (let i = 0; i < 4; i++) {
 					if (line.length == 0)
 						break;
-					line = `${nickPrepend} ${line}`;
+					line = decorateMessage(line);
 					let lineSplit = line;
 					if (line.length >= BridgePlugin.IRC_MSG_MAX_LEN) {
 						lineSplit = line.substring(0, BridgePlugin.IRC_MSG_MAX_LEN);
@@ -405,9 +411,7 @@ class BridgePlugin {
 			}
 			break;
 		case Channel.TYPE_DISCORD:
-			this.env.sendMessageNoBridge(
-				toChan, `${nickPrepend} ${msg}`
-			);
+			doSendMessage(msg);
 			break;
 		default:
 			throw new Error('unrecognized channel type');
