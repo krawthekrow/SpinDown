@@ -397,13 +397,30 @@ class BridgePlugin {
 					if (line.length == 0)
 						break;
 					line = decorateMessage(line);
-					let lineSplit = line;
-					if (line.length >= BridgePlugin.IRC_MSG_MAX_LEN) {
-						lineSplit = line.substring(0, BridgePlugin.IRC_MSG_MAX_LEN);
-						line = line.substring(BridgePlugin.IRC_MSG_MAX_LEN);
+
+					// let lineSplit = line;
+					let lineSplitLen = 0;
+					let lineSplit = '';
+					let rem = '';
+					let hitLimit = false;
+					for (const c of line) {
+						if (hitLimit) {
+							rem += c;
+							continue;
+						}
+
+						const cLen = Buffer.from(c).length;
+						if (lineSplitLen + cLen > BridgePlugin.IRC_MSG_MAX_LEN) {
+							hitLimit = true;
+							rem += c;
+							continue;
+						}
+
+						lineSplitLen += cLen;
+						lineSplit += c;
 					}
-					else
-						line = '';
+
+					line = rem;
 					this.env.sendMessageNoBridge(
 						toChan, lineSplit
 					);
