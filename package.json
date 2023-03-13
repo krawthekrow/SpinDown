@@ -18,7 +18,7 @@
     "request": "^2.88.2",
     "simple-markdown": "^0.7.3",
     "sodium": "^3.0.2",
-    "sqlite3": "^5.0.6",
+    "sqlite3": "^5.1.5",
     "zlib-sync": "^0.1.7",
     "zucc": "^0.1.2"
   },
