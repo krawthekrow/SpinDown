@@ -27,6 +27,14 @@ class PluginsManager {
 
 		this.reloadSelf = () => {};
 
+		this.pluginWhitelist = {};
+		for (const [chanSpec, whitelist] of Object.entries(config.PLUGIN_WHITELIST)) {
+			const chanId = Channel.fromString(
+				chanSpec, this.ircCli, this.discordCli
+			).id;
+			this.pluginWhitelist[chanId] = whitelist;
+		}
+
 		this.plugins = new Map();
 		this.reloadPlugins();
 	}
@@ -202,6 +210,16 @@ class PluginsManager {
 				plugin.handleAction(user, chan, msg.content);
 		}
 	}
+	getEnabledPluginsForChan(chan) {
+		if (!(chan.id in this.pluginWhitelist)) {
+			return this.plugins;
+		}
+		const enabledPlugins = [];
+		for (const pluginName of this.pluginWhitelist[chan.id]) {
+			enabledPlugins.push([pluginName, this.plugins.get(pluginName)]);
+		}
+		return enabledPlugins;
+	}
 	handleMessage(user, chan, msg) {
 		// don't support thread creation for now
 		if (msg.type == Message.TYPE_DISCORD && msg.val.type == 'THREAD_STARTER_MESSAGE')
@@ -209,7 +227,9 @@ class PluginsManager {
 
 		if (User.equal(this.getUser(chan.type), user))
 			return false;
-		for (const [pluginName, plugin] of this.plugins) {
+
+		const enabledPlugins = this.getEnabledPluginsForChan(chan);
+		for (const [pluginName, plugin] of enabledPlugins) {
 			if ('handleFullMessage' in plugin)
 				plugin.handleFullMessage(user, chan, msg);
 			if ('handleMessage' in plugin)
@@ -229,7 +249,7 @@ class PluginsManager {
 			return false;
 
 		console.log(`<${user.getNick(chan)}${chan.isQuery ? '' : `:${chan.fullName}`}> ${cmdStr}`);
-		for(const [pluginName, plugin] of this.plugins){
+		for(const [pluginName, plugin] of enabledPlugins){
 			const [cmd, argstring] = this.extractCmd(cmdStr);
 			if ('handleCommand' in plugin)
 				plugin.handleCommand(cmd, argstring, returnChannel, user);

@@ -22,6 +22,11 @@ module.exports = {
 		]]
 	],
 	BOT_DISCORD_TOKEN: 'YOUR_TOKEN', // optional
+	PLUGIN_WHITELIST: {
+		// only channels listed here will have a whitelist applied; all other
+		// channels will have access to all commands
+		'discord:server#channel': ['bridge'],
+	},
 	PLUGINS_CONFIG: {
 		GENERAL: {
 			OBSERVATIONS_FILENAME:
