@@ -178,24 +178,33 @@ class Channel {
 			);
 		case Channel.TYPE_DISCORD:
 			const match = Channel.REGEX_FIND_DISCORD.exec(name);
-			if (match == null)
-				return null;
-			if (match.length != 3)
-				throw new Error('expected match of length 3');
+			if (match != null) {
+				if (match.length != 3)
+					throw new Error('expected match of length 3');
 
-			const genericChan = [...discordCli.channels.cache.values()].find(chan => {
-				if (chan.type != 'GUILD_TEXT')
-					return false;
-				if (chan.guild == null)
-					return match[1] == '' && chan.name == match[2];
-				return (
-					chan.guild.name == match[1] &&
-					chan.name == match[2]
-				);
-			});
-			if (genericChan == null)
+				const genericChan = [...discordCli.channels.cache.values()].find(chan => {
+					if (chan.type != 'GUILD_TEXT')
+						return false;
+					if (chan.guild == null)
+						return match[1] == '' && chan.name == match[2];
+					return (
+						chan.guild.name == match[1] &&
+						chan.name == match[2]
+					);
+				});
+				if (genericChan == null)
+					return null;
+				const val = discordCli.channels.cache.get(genericChan.id);
+				return new Channel(Channel.TYPE_DISCORD, val);
+			}
+
+			// Allow specifying channel by ID
+			const exactMatch = Channel.REGEX_EXACT_DISCORD.exec(name);
+			if (exactMatch == null)
 				return null;
-			const val = discordCli.channels.cache.get(genericChan.id);
+			if (exactMatch.length != 2)
+				throw new Error('expected match of length 2');
+			const val = discordCli.channels.cache.get(exactMatch[1]);
 			return new Channel(Channel.TYPE_DISCORD, val);
 		default:
 			throw new Error('unrecognized channel type');
@@ -326,6 +335,7 @@ Channel.REGEX_DISCORD = /^discord:(.*)$/;
 Channel.REGEX_DISCORD_DM = /^discord-dm:(.*)$/;
 
 Channel.REGEX_FIND_DISCORD = /^([^#]*)#(.*)$/;
+Channel.REGEX_EXACT_DISCORD = /^([0-9]+)$/;
 
 Channel.TYPE_IRC = 0;
 Channel.TYPE_DISCORD = 1;
