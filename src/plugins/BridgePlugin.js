@@ -72,6 +72,13 @@ class BridgePlugin {
 		this.ircCli = this.env.ircCli;
 		this.discordCli = this.env.discordCli;
 
+		this.webhookBlacklist = {};
+		for (const chanSpec of config.WEBHOOK_BLACKLIST) {
+			this.webhookBlacklist[Channel.fromString(
+				chanSpec, this.ircCli, this.discordCli
+			).id] = true;
+		}
+
 		this.links = [];
 		for (const linkSpec of config.LINKS) {
 			let link = [];
@@ -194,6 +201,9 @@ class BridgePlugin {
 	}
 	handleFullMessage(user, chan, msg) {
 		if (config.BLACKLIST.includes(user.id)) {
+			return;
+		}
+		if (chan.id in this.webhookBlacklist && msg.isWebhook) {
 			return;
 		}
 		const doRelay = (replyContent) => {

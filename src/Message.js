@@ -23,6 +23,16 @@ class Message {
 			throw new Error('unrecognized message type');
 		}
 	}
+	get isWebhook() {
+		switch (this.type) {
+		case Message.TYPE_IRC:
+			return false;
+		case Message.TYPE_DISCORD:
+			return this.val.webhookId != undefined;
+		default:
+			throw new Error('unrecognized channel type');
+		}
+	}
 };
 
 Message.TYPE_IRC = 0;

@@ -47,6 +47,10 @@ module.exports = {
 			BLACKLIST: [
 				'irc:username@titlebot/hostmask',
 			],
+			// webhook messages from channels on this blacklist will not be relayed
+			WEBHOOK_BLACKLIST: [
+				'discord:server#channel',
+			],
 			LINKS: [
 				['irc:#channel', 'discord:server#channel'],
 			],
