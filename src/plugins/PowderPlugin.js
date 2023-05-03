@@ -623,7 +623,7 @@ class PowderPlugin {
 								this.env.ircCli,
 								this.env.discordCli
 							),
-							`Subframe FP Update; http://tpt.io/~${save.ID}`
+							`Subframe FP Update; '${save.Name}' by ${save.Username}; http://tpt.io/~${save.ID}`
 						);
 					}
 				}
