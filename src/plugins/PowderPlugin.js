@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const mkdirp = require('mkdirp');
-const request = require('request');
+const querystring = require('querystring');
+const https = require('https');
 
 const sqlite3 = require('sqlite3').verbose();
 
@@ -39,6 +40,38 @@ if(!fs.existsSync(WATCH_FILENAME)){
 const WATCH = JSON.parse(fs.readFileSync(WATCH_FILENAME).toString());
 
 const LEGACY = false;
+
+const doJsonGetRequest = (hostname, path, formData, onResp, onErr) => {
+	const formStr = querystring.stringify(formData);
+	const pathWithOpts =
+		path + ((formStr.length == 0) ? '' : `?${formStr}`);
+	const debugFullUrl = `https://${hostname}${pathWithOpts}`;
+	let body = '';
+	const req = https.request({
+		hostname: hostname,
+		path: pathWithOpts,
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+	}, (resp) => {
+		resp.on('data', (chunk) => {
+			body += chunk;
+		});
+		resp.on('end', () => {
+			if (resp.statusCode != 200) {
+				console.error(`Error fetching URL: ${debugFullUrl}${'\n'}GET response code: ${resp.statusCode}${'\n'}${body}`);
+				onErr();
+				return;
+			}
+			onResp(JSON.parse(body));
+		});
+	}).on('error', (e) => {
+		console.error(`Error processing URL: ${debugFullUrl}${'\n'}Body:${'\n'}${body}`);
+		console.error(e);
+		onErr();
+	}).end();
+};
 
 class PowderPlugin {
 	constructor(env){
@@ -543,8 +576,10 @@ class PowderPlugin {
 		switch(currTask.type) {
 		case 'querySave': {
 			this.getSave(currTask.saveId, (save) => {
-				if (save == null)
+				if (save == null) {
 					this.doTaskAsync();
+					return;
+				}
 				this.sendSave(
 					currTask.returnChan,
 					save
@@ -783,190 +818,193 @@ class PowderPlugin {
 			return;
 		}
 		const usersConcat = users.join(',');
-		const searchReq =
-			`http://powdertoythings.co.uk/Powder/Saves/Search.json?Search_Query=user%3A${usersConcat}`;
-		request(searchReq, {
-			json: true
-		}, (err, resp, body) => {
-			if (err) {
-				console.error(err);
+		doJsonGetRequest(
+			'powdertoythings.co.uk',
+			'/Powder/Saves/Search.json',
+			{
+				Search_Query: `user%3A${usersConcat}`,
+			},
+			(body) => {
+				const res = [];
+				for (const user of users) {
+					if (!(user in this.cache.users)) {
+						this.cache.users[user] = 0;
+					}
+				}
+				for (let i = Math.min(body.Saves.length, maxUpdates) - 1;
+					i >= 0; i--) {
+					const user = body.Saves[i].Username;
+					const updatedTime = body.Saves[i].Updated;
+					if (updatedTime > this.cache.users[user]) {
+						res.push(body.Saves[i]);
+						this.cache.users[user] = updatedTime;
+					}
+				}
+				this.saveCache();
+				handleUpdates(res);
+			},
+			() => {
 				handleUpdates([]);
-				return false;
 			}
-			const res = [];
-			for (const user of users) {
-				if (!(user in this.cache.users)) {
-					this.cache.users[user] = 0;
-				}
-			}
-			for (let i = Math.min(body.Saves.length, maxUpdates) - 1;
-				i >= 0; i--) {
-				const user = body.Saves[i].Username;
-				const updatedTime = body.Saves[i].Updated;
-				if (updatedTime > this.cache.users[user]) {
-					res.push(body.Saves[i]);
-					this.cache.users[user] = updatedTime;
-				}
-			}
-			this.saveCache();
-			handleUpdates(res);
-		});
+		);
 	}
 	getSubframeUpdates(onComplete){
-		const searchReq =
-			`http://powdertoy.co.uk/Browse.json?Search_Query=subframe+sort%3Adate`;
-		request(searchReq, {
-			json: true
-		}, (err, resp, body) => {
-			if (err) {
-				console.error(err);
-				onComplete();
-				return false;
-			}
-			if (!body.Saves) {
-				console.log('unable to get subframe updates');
-				onComplete();
-				return false;
-			}
-
-			const currTime = new Date().getTime();
-			let placeholders = [];
-			let values = [];
-			for (let i = 0; i < body.Saves.length; i++) {
-				const saveId = body.Saves[i].ID;
-				const updatedTime = body.Saves[i].Updated;
-				if (currTime / 1000 - updatedTime > FP_EXPIRE_TIME_SECONDS)
-					continue;
-				if (!(saveId in this.cache.subframe)) {
-					this.cache.subframe[saveId] = {
-						state: 0,
-						updated: body.Saves[i].Updated
-					};
-				}
-				placeholders.push('(?, ?, 0)');
-				values.push([saveId, updatedTime]);
-			}
-			this.saveCache();
-			if (values.length == 0) {
-				onComplete();
-				return false;
-			}
-			this.db.run(
-				`INSERT OR IGNORE INTO fp_cache(save_id, last_updated, reported) VALUES ${placeholders.join(',')}`,
-				[].concat(...values),
-				(err) => {
-					if (err)
-						console.error(err);
+		doJsonGetRequest(
+			'powdertoy.co.uk',
+			'/Browse.json',
+			{
+				Search_Query: 'subframe+sort%3Adate',
+			},
+			(body) => {
+				if (!body.Saves) {
+					console.log('unable to get subframe updates');
 					onComplete();
+					return false;
 				}
-			);
-		});
+
+				const currTime = new Date().getTime();
+				let placeholders = [];
+				let values = [];
+				for (let i = 0; i < body.Saves.length; i++) {
+					const saveId = body.Saves[i].ID;
+					const updatedTime = body.Saves[i].Updated;
+					if (currTime / 1000 - updatedTime > FP_EXPIRE_TIME_SECONDS)
+						continue;
+					if (!(saveId in this.cache.subframe)) {
+						this.cache.subframe[saveId] = {
+							state: 0,
+							updated: body.Saves[i].Updated
+						};
+					}
+					placeholders.push('(?, ?, 0)');
+					values.push([saveId, updatedTime]);
+				}
+				this.saveCache();
+				if (values.length == 0) {
+					onComplete();
+					return false;
+				}
+				this.db.run(
+					`INSERT OR IGNORE INTO fp_cache(save_id, last_updated, reported) VALUES ${placeholders.join(',')}`,
+					[].concat(...values),
+					(err) => {
+						if (err)
+							console.error(err);
+						onComplete();
+					}
+				);
+			},
+			() => {
+				onComplete();
+			}
+		);
 	}
 	getFpUpdates(handleUpdates){
-		const searchReq = `http://powdertoy.co.uk/Browse.json`;
-		request(searchReq, {
-			json: true
-		}, (err, resp, body) => {
-			if (err) {
-				console.error(err);
-				handleUpdates([]);
-				return false;
-			}
-			if (!body.Saves) {
-				console.error('PowderPlugin: no Saves in body');
-				console.error(body);
-				handleUpdates([]);
-				return false;
-			}
-			const res = [];
-			for (let i = 0; i < body.Saves.length; i++) {
-				const saveId = body.Saves[i].ID;
-				if ((saveId in this.cache.subframe) &&
-					this.cache.subframe[saveId].state == 0) {
-					res.push(body.Saves[i]);
-					this.cache.subframe[saveId].state = 1;
+		doJsonGetRequest(
+			'powdertoy.co.uk',
+			'/Browse.json',
+			{},
+			(body) => {
+				if (!body.Saves) {
+					console.error('PowderPlugin: no Saves in body');
+					console.error(body);
+					handleUpdates([]);
+					return false;
 				}
-			}
-			const currTime = new Date().getTime();
-			const expiryTime =
-				parseInt(currTime / 1000) - FP_EXPIRE_TIME_SECONDS;
-			for (const saveId in this.cache.subframe) {
-				const updatedTime = this.cache.subframe[saveId].updated;
-				if (updatedTime < expiryTime) {
+				const res = [];
+				for (let i = 0; i < body.Saves.length; i++) {
+					const saveId = body.Saves[i].ID;
+					if ((saveId in this.cache.subframe) &&
+						this.cache.subframe[saveId].state == 0) {
+						res.push(body.Saves[i]);
+						this.cache.subframe[saveId].state = 1;
+					}
+				}
+				const currTime = new Date().getTime();
+				const expiryTime =
+					parseInt(currTime / 1000) - FP_EXPIRE_TIME_SECONDS;
+				for (const saveId in this.cache.subframe) {
+					const updatedTime = this.cache.subframe[saveId].updated;
+					if (updatedTime < expiryTime) {
 
-					delete this.cache.subframe[saveId];
+						delete this.cache.subframe[saveId];
+					}
 				}
+				this.saveCache();
+				this.db.run(
+					`DELETE FROM fp_cache WHERE last_updated < ${expiryTime.toString()}`
+				);
+				handleUpdates(res);
+			},
+			() => {
+				handleUpdates([]);
 			}
-			this.saveCache();
-			this.db.run(
-				`DELETE FROM fp_cache WHERE last_updated < ${expiryTime.toString()}`
-			);
-			handleUpdates(res);
-		});
+		);
 	}
 	getCommentUpdates(user, pageNum, handleUpdates){
-		const searchReq =
-			`http://powdertoy.co.uk/Browse.json?Search_Query=user%3A${user}+sort%3Adate&PageNum=${pageNum}`;
-		request(searchReq, {
-			json: true
-		}, (err, resp, body) => {
-			if (err) {
-				console.error(err);
-				handleUpdates(0, []);
-				return false;
-			}
-			if (!body || !body.Saves) {
-				console.error('PowderPlugin: no Saves in body');
-				console.error(body);
-				handleUpdates(0, []);
-				return false;
-			}
-			const res = [];
-			for (let i = 0; i < body.Saves.length; i++) {
-				const saveId = body.Saves[i].ID;
-				let cacheCommentCount = 0;
-				if (saveId in this.cache.comments) {
-					cacheCommentCount = this.cache.comments[saveId];
+		doJsonGetRequest(
+			'powdertoy.co.uk',
+			'/Browse.json',
+			{
+				Search_Query: `user%3A${user}+sort%3Adate&PageNum=${pageNum}`,
+			},
+			(body) => {
+				if (!body || !body.Saves) {
+					console.error('PowderPlugin: no Saves in body');
+					console.error(body);
+					handleUpdates(0, []);
+					return false;
 				}
-				// console.log(`found ${body.Saves[i].Comments} comments for save ${saveId} (${cacheCommentCount} in cache)`);
-				if (body.Saves[i].Comments > cacheCommentCount) {
-					res.push({
-						save: body.Saves[i],
-						newComments: body.Saves[i].Comments -
-							cacheCommentCount
-					});
+				const res = [];
+				for (let i = 0; i < body.Saves.length; i++) {
+					const saveId = body.Saves[i].ID;
+					let cacheCommentCount = 0;
+					if (saveId in this.cache.comments) {
+						cacheCommentCount = this.cache.comments[saveId];
+					}
+					// console.log(`found ${body.Saves[i].Comments} comments for save ${saveId} (${cacheCommentCount} in cache)`);
+					if (body.Saves[i].Comments > cacheCommentCount) {
+						res.push({
+							save: body.Saves[i],
+							newComments: body.Saves[i].Comments -
+								cacheCommentCount
+						});
+					}
 				}
+				handleUpdates(body.Count, res);
+			},
+			() => {
+				handleUpdates(0, []);
 			}
-			handleUpdates(body.Count, res);
-		});
+		);
 	}
 	getComments(save, numComments, handleUpdates){
-		const searchReq =
-			`http://powdertoy.co.uk/Browse/Comments.json?ID=${save.ID}&Start=0&Count=${numComments}`;
-		request(searchReq, {
-			json: true
-		}, (err, resp, body) => {
-			if (err) {
-				console.error(err);
+		doJsonGetRequest(
+			'powdertoy.co.uk',
+			'/Browse/Comments.json',
+			{
+				ID: save.ID,
+				Start: 0,
+				Count: numComments,
+			},
+			handleUpdates,
+			() => {
 				handleUpdates([]);
-				return false;
 			}
-			handleUpdates(body);
-		});
+		);
 	}
 	getSave(saveId, handleSave){
-		const searchReq =
-			`http://powdertoy.co.uk/Browse/View.json?ID=${saveId.toString()}`;
-		request(searchReq, {
-			json: true
-		}, (err, resp, body) => {
-			if (err) {
-				console.error(err);
+		doJsonGetRequest(
+			'powdertoy.co.uk',
+			'/Browse/View.json',
+			{
+				ID: saveId.toString(),
+			},
+			handleSave,
+			() => {
 				handleSave(null);
-				return false;
 			}
-			handleSave(body);
-		});
+		);
 	}
 	saveCache(){
 		fs.writeFileSync(CACHE_FILENAME, JSON.stringify(this.cache));

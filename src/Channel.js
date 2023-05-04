@@ -1,3 +1,4 @@
+const Discord = require('discord.js');
 const User = require('./User.js');
 
 class IrcChannelData {
@@ -38,7 +39,7 @@ class Channel {
 				throw new Error('zero-length channel name');
 			return this.name[0] != '#';
 		case Channel.TYPE_DISCORD:
-			return 'username' in this.val || this.val.type == 'DM';
+			return 'username' in this.val || this.val.type == Discord.ChannelType.DM;
 		default:
 			throw new Error('unrecognized channel type');
 		}
@@ -148,7 +149,7 @@ class Channel {
 		if (match != null) {
 			if (match.length != 2)
 				throw new Error('match should have length 2');
-			const user = discordCli.users.cache.find(user => user.tag == match[1]);
+			const user = discordCli.members.cache.find(user => user.tag == match[1]);
 			if (user == null)
 				return null;
 			return new Channel(
@@ -168,7 +169,7 @@ class Channel {
 		case Channel.TYPE_IRC:
 			if (name.length < 1)
 				throw new Error('zero-length channel name');
-			if (name[0] == '#' && !(name in ircCli.chans))
+			if (name[0] == '#' && !ircCli.chans.has(name))
 				return null;
 			return new Channel(
 				Channel.TYPE_IRC,
@@ -183,7 +184,7 @@ class Channel {
 					throw new Error('expected match of length 3');
 
 				const genericChan = [...discordCli.channels.cache.values()].find(chan => {
-					if (chan.type != 'GUILD_TEXT')
+					if (chan.type != Discord.ChannelType.GuildText)
 						return false;
 					if (chan.guild == null)
 						return match[1] == '' && chan.name == match[2];
@@ -216,7 +217,7 @@ class Channel {
 		switch (this.type) {
 		case Channel.TYPE_IRC:
 			return !this.isQuery &&
-				user.val.nick in this.val.client.chans[this.name].users;
+				user.val.nick in this.val.client.chans.get(this.name).users;
 		case Channel.TYPE_DISCORD:
 			return !this.isQuery &&
 				this.val.guild.member(user.val.id) != null;
@@ -227,7 +228,7 @@ class Channel {
 	hasPowderBotInsecure() {
 		return this.type == Channel.TYPE_IRC &&
 			!this.isQuery &&
-			'PowderBot' in this.val.client.chans[this.name].users;
+			'PowderBot' in this.val.client.chans.get(this.name).users;
 	}
 	escapeIrcStr(str) {
 		switch (this.type) {
@@ -294,7 +295,7 @@ class Channel {
 		if (this.type != Channel.TYPE_DISCORD) {
 			return null;
 		}
-		if (this.val.type == 'dm') {
+		if (this.val.type == Discord.ChannelType.DM) {
 			return nick;
 		}
 		nick = nick.toLowerCase();

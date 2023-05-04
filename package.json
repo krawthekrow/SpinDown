@@ -1,37 +1,30 @@
 {
-  "name": "markbot",
+  "name": "spindown",
   "version": "1.0.0",
   "description": "Yet another IRC bot.",
   "main": "app.js",
   "dependencies": {
-    "bufferutil": "^4.0.6",
-    "discord.js": "^13.6.0",
+    "bufferutil": "^4.0.7",
+    "discord.js": "^14.10.2",
     "iconv": "^3.0.1",
-    "irc": "github:matrix-org/node-irc#9028c2197c216dd8e6fc2cb3cc07ce2d6bf741a7",
+    "irc": "github:matrix-org/node-irc#bc663fe4adc8b817cff46477398ab746abbd2104",
     "irc-colors": "^1.5.0",
     "irc-formatting": "^1.0.0-rc3",
-    "libsodium-wrappers": "^0.7.10",
-    "mkdirp": "^1.0.4",
-    "node-gyp": "^9.0.0",
-    "npm": "^8.8.0",
-    "opusscript": "0.0.8",
-    "request": "^2.88.2",
+    "libsodium-wrappers": "^0.7.11",
+    "mkdirp": "^3.0.1",
+    "node-gyp": "^9.3.1",
+    "npm": "^9.6.6",
+    "opusscript": "0.1.0",
     "simple-markdown": "^0.7.3",
     "sodium": "^3.0.2",
-    "sqlite3": "^5.0.6",
-    "zlib-sync": "^0.1.7",
+    "sqlite3": "^5.1.6",
+    "zlib-sync": "^0.1.8",
     "zucc": "^0.1.2"
-  },
-  "scripts": {
-    "preinstall": "npx npm-force-resolutions"
   },
   "author": "krawthekrow",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/krawthekrow/markbot.git"
-  },
-  "resolutions": {
-    "node-gyp": "^9.0.0"
+    "url": "https://github.com/krawthekrow/spindown.git"
   }
 }

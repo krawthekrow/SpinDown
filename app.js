@@ -36,29 +36,37 @@ const reloadPluginsManager = () => {
 	}
 };
 
-let discordConnected = false;
-let ircConnected = false;
-function fetchAllMembers(guilds) {
+// Fetches all members from each guild, and then calls onDone.
+// Some plugins require existing members to be in the cache
+// from the beginning. Seems like we don't need to do this for
+// channels though (they're already in the cache from the
+// beginning).
+function fetchAllGuildsData(guilds, onDone) {
 	if (guilds.length == 0) {
+		onDone();
 		return;
 	}
 	guilds[0].members.fetch().then(() => {
-		fetchAllMembers(guilds.slice(1));
+		fetchAllGuildsData(guilds.slice(1), onDone);
 	}).catch((e) => {
 		console.error(e);
 	});
 }
+
+let discordConnected = false;
+let ircConnected = false;
 function onClientConnect() {
 	if (!discordConnected || !ircConnected)
 		return;
-	reloadPluginsManager();
 
-	const guildsMap = new Map();
-	for (const chan of discordCli.channels.cache.values()) {
-		guildsMap.set(chan.guild.id, chan.guild);
-	}
-	const guilds = [...guildsMap.values()];
-	fetchAllMembers(guilds);
+	discordCli.guilds.fetch().then(() => {
+		const guilds = [...discordCli.guilds.cache.values()];
+		fetchAllGuildsData(guilds, () => {
+			reloadPluginsManager();
+		});
+	}).catch((e) => {
+		console.error(e);
+	});;
 }
 
 discordCli = new Discord.Client({
@@ -66,11 +74,14 @@ discordCli = new Discord.Client({
 		'CHANNEL',
 	],
 	intents: [
-		Discord.Intents.FLAGS.GUILDS,
-		Discord.Intents.FLAGS.GUILD_MEMBERS,
-		Discord.Intents.FLAGS.GUILD_MESSAGES,
-		Discord.Intents.FLAGS.DIRECT_MESSAGES,
+		Discord.GatewayIntentBits.Guilds,
+		Discord.GatewayIntentBits.GuildMessages,
+		Discord.GatewayIntentBits.MessageContent,
+		Discord.GatewayIntentBits.GuildMembers,
+		Discord.GatewayIntentBits.DirectMessages,
 	],
+	// Necessary for DMs for some reason
+	partials: [ Discord.Partials.Channel ],
 });
 
 discordCli.on('ready', () => {

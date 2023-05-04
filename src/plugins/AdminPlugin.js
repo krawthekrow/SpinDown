@@ -8,7 +8,7 @@ class AdminPlugin {
 		this.discordCli = this.env.discordCli;
 		this.cmds = {
 			'die': (returnChannel, argstring, sender) => {
-				this.sendHighlight(returnChannel, sender, `SpinDown forgot how to die :(`);
+				this.env.sendHighlight(returnChannel, sender, `SpinDown forgot how to die :(`);
 				// this.env.dispose();
 				// this.client.disconnect('*BOOM*');
 			},
@@ -87,7 +87,7 @@ class AdminPlugin {
 
 				const re = new RegExp(argstring);
 				this.env.sendMessage(returnChannel,
-					Object.keys(this.ircCli.chans[returnChannel.val.name].users)
+					[...this.ircCli.chans.get(returnChannel.val.name).users.keys()]
 					.filter(nick => re.test(nick))
 					.map(nick => nick + ': ').join('')
 				);

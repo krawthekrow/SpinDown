@@ -669,7 +669,7 @@ class BridgePlugin {
 		// first time this is called
 		toChan.val.messages.fetchPinned().then(messages => {
 			let users = Object.keys(
-				this.ircCli.chans[fromChan.name].users
+				this.ircCli.chans.get(fromChan.name).users
 			);
 			users.sort();
 			const userListMsg = `IRC users online: ${users.join(' ')}`;
