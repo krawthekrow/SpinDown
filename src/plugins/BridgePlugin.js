@@ -72,6 +72,11 @@ class BridgePlugin {
 		this.ircCli = this.env.ircCli;
 		this.discordCli = this.env.discordCli;
 
+		this.blacklist = [];
+		for (const userSpec of config.BLACKLIST) {
+			this.blacklist.push(User.resolveConfig(userSpec));
+		}
+
 		this.webhookBlacklist = {};
 		for (const chanSpec of config.WEBHOOK_BLACKLIST) {
 			this.webhookBlacklist[Channel.fromString(
@@ -200,7 +205,7 @@ class BridgePlugin {
 		}
 	}
 	handleFullMessage(user, chan, msg) {
-		if (config.BLACKLIST.includes(user.id)) {
+		if (this.blacklist.includes(user.id)) {
 			return;
 		}
 		if (chan.id in this.webhookBlacklist && msg.isWebhook) {
@@ -262,7 +267,7 @@ class BridgePlugin {
 		doRelay(null);
 	}
 	handleAction(user, chan, msg) {
-		if (config.BLACKLIST.includes(user.id)) {
+		if (this.blacklist.includes(user.id)) {
 			return;
 		}
 		const downstreams = this.getDownstreams(chan);
@@ -274,7 +279,7 @@ class BridgePlugin {
 		}
 	}
 	handleEdit(user, chan, msg) {
-		if (config.BLACKLIST.includes(user.id)) {
+		if (this.blacklist.includes(user.id)) {
 			return;
 		}
 		if (user.getIsBot()) {
