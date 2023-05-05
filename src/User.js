@@ -1,3 +1,5 @@
+const config = require('../config.js');
+
 class IrcUserData {
 	constructor(nick, username, hostmask) {
 		this.nick = nick;
@@ -47,7 +49,7 @@ class User {
 		case User.TYPE_IRC:
 			return `irc:${this.val.tag}`;
 		case User.TYPE_DISCORD:
-			return `discord:${this.val.tag}`;
+			return `discord:${this.val.id}`;
 		default:
 			throw new Error('unrecognized user type');
 		}
@@ -76,7 +78,33 @@ class User {
 	static equal(user1, user2) {
 		return user1.id == user2.id;
 	}
+	// resolve a name specified in the config file
+	static resolveConfig(name) {
+		let match;
+
+		match = User.REGEX_DISCORD_RESOLVED.exec(name);
+		if (match != null) {
+			return name;
+		}
+
+		match = User.REGEX_DISCORD.exec(name);
+		if (match != null) {
+			if (match.length != 2)
+				throw new Error('match should have length 2');
+			const resolvedId = config.DISCORD_USER_IDS[match[1]];
+			if (resolvedId == undefined) {
+				throw new Error(`unable to resolve ${match[1]}`);
+			}
+			return `discord:${resolvedId}`;
+		}
+
+		// fallthrough for irc
+		return name;
+	}
 };
+
+User.REGEX_DISCORD_RESOLVED = /^discord:(\d+)$/;
+User.REGEX_DISCORD = /^discord:(.*)$/;
 
 User.TYPE_IRC = 0;
 User.TYPE_DISCORD = 1;

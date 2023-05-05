@@ -7,7 +7,7 @@ const DEFAULT_GROUPS = new Map();
 	for(const [group, userList] of DEFAULT_GROUPS_ARR){
 		const users = new Set();
 		for(const user of userList){
-			users.add(user);
+			users.add(User.resolveConfig(user));
 		}
 		DEFAULT_GROUPS.set(group, users);
 	}

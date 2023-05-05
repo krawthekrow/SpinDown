@@ -1,4 +1,5 @@
 const Discord = require('discord.js');
+const config = require('../config.js');
 const User = require('./User.js');
 
 class IrcChannelData {
@@ -178,6 +179,10 @@ class Channel {
 				)
 			);
 		case Channel.TYPE_DISCORD:
+			if (config.DISCORD_CHANNEL_IDS[name] != undefined) {
+				name = config.DISCORD_CHANNEL_IDS[name];
+			}
+
 			const match = Channel.REGEX_FIND_DISCORD.exec(name);
 			if (match != null) {
 				if (match.length != 3)
@@ -299,6 +304,20 @@ class Channel {
 			return nick;
 		}
 		nick = nick.toLowerCase();
+
+		const makeHighlight = (member) => {
+			const hasNick = member.nickname != null;
+			return `<@${hasNick ? '!':''}${member.id}>`;
+		};
+
+		const configId = config.DISCORD_USER_IDS[nick];
+		if (configId != undefined) {
+			const member = this.val.members.get(configId);
+			if (member != undefined) {
+				return makeHighlight(member);
+			}
+		}
+
 		let memberMatches = this.val.members.filter(member => {
 			return member.displayName.toLowerCase() == nick ||
 				member.user.username.toLowerCase() == nick ||
@@ -321,13 +340,21 @@ class Channel {
 					sanitizeMention(member.user.tag).startsWith(nick);
 			});
 		}
-		if (memberMatches.size != 1) {
-			return null;
+		if (memberMatches.size == 1) {
+			const member = memberMatches.first();
+			return makeHighlight(member);
 		}
-		const member = memberMatches.first();
-		const hasNick = member.nickname != null;
 
-		return `<@${hasNick ? '!':''}${member.id}>`;
+		// allow identifying by full ID, such as through aliases
+		const exactMatch = Channel.REGEX_EXACT_DISCORD.exec(nick);
+		if (exactMatch != null) {
+			const member = this.val.members.get(exactMatch[1]);
+			if (member != undefined) {
+				return makeHighlight(member);
+			}
+		}
+
+		return null;
 	}
 };
 
