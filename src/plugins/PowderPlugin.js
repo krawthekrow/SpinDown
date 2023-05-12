@@ -822,7 +822,7 @@ class PowderPlugin {
 			'powdertoythings.co.uk',
 			'/Powder/Saves/Search.json',
 			{
-				Search_Query: `user%3A${usersConcat}`,
+				Search_Query: `user:${usersConcat}`,
 			},
 			(body) => {
 				const res = [];
@@ -853,7 +853,7 @@ class PowderPlugin {
 			'powdertoy.co.uk',
 			'/Browse.json',
 			{
-				Search_Query: 'subframe+sort%3Adate',
+				Search_Query: 'subframe+sort:date',
 			},
 			(body) => {
 				if (!body.Saves) {
@@ -946,7 +946,7 @@ class PowderPlugin {
 			'powdertoy.co.uk',
 			'/Browse.json',
 			{
-				Search_Query: `user%3A${user}+sort%3Adate&PageNum=${pageNum}`,
+				Search_Query: `user:${user}+sort:date&PageNum=${pageNum}`,
 			},
 			(body) => {
 				if (!body || !body.Saves) {
