@@ -946,7 +946,8 @@ class PowderPlugin {
 			'powdertoy.co.uk',
 			'/Browse.json',
 			{
-				Search_Query: `user:${user}+sort:date&PageNum=${pageNum}`,
+				Search_Query: `user:${user}+sort:date`,
+				PageNum: `${pageNum}`,
 			},
 			(body) => {
 				if (!body || !body.Saves) {
