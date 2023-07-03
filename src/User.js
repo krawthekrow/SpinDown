@@ -78,21 +78,29 @@ class User {
 	static equal(user1, user2) {
 		return user1.id == user2.id;
 	}
+	// resolve a name that might be using a readable username format
+	static resolveDiscordName(name) {
+		if (/^(\d+)$/.exec(name) != null) {
+			// already resolved
+			return name;
+		}
+
+		const resolvedId = config.DISCORD_USER_IDS[name];
+		if (resolvedId == undefined) {
+			return name;
+		}
+		return resolvedId;
+	}
 	// resolve a name specified in the config file
 	static resolveConfig(name) {
 		let match;
-
-		match = User.REGEX_DISCORD_RESOLVED.exec(name);
-		if (match != null) {
-			return name;
-		}
 
 		match = User.REGEX_DISCORD.exec(name);
 		if (match != null) {
 			if (match.length != 2)
 				throw new Error('match should have length 2');
-			const resolvedId = config.DISCORD_USER_IDS[match[1]];
-			if (resolvedId == undefined) {
+			const resolvedId = User.resolveDiscordName(match[1]);
+			if (/^(\d+)$/.exec(resolvedId) == null) {
 				throw new Error(`unable to resolve ${match[1]}`);
 			}
 			return `discord:${resolvedId}`;

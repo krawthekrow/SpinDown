@@ -150,7 +150,10 @@ class Channel {
 		if (match != null) {
 			if (match.length != 2)
 				throw new Error('match should have length 2');
-			const user = discordCli.members.cache.find(user => user.tag == match[1]);
+			const resolvedId = User.resolveDiscordName(match[1]);
+			const user = (/^(\d+)$/.exec(resolvedId) != null) ?
+				discordCli.users.cache.get(resolvedId) :
+				discordCli.users.cache.find(user => user.tag == match[1]);
 			if (user == null)
 				return null;
 			return new Channel(

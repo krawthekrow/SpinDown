@@ -1,5 +1,6 @@
 const { exec } = require('child_process');
 const Channel = require('../Channel.js');
+const User = require('../User.js');
 
 class AdminPlugin {
 	constructor(env){
