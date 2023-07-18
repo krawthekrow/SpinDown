@@ -1,4 +1,5 @@
 const config = require('../config.js');
+const Discord = require('discord.js');
 const Channel = require('./Channel.js');
 const User = require('./User.js');
 const Message = require('./Message.js');
@@ -221,8 +222,11 @@ class PluginsManager {
 		return enabledPlugins;
 	}
 	handleMessage(user, chan, msg) {
-		// don't support thread creation for now
-		if (msg.type == Message.TYPE_DISCORD && msg.val.type == 'THREAD_STARTER_MESSAGE')
+		// only support certain message types for now
+		if (msg.type == Message.TYPE_DISCORD && ![
+			Discord.MessageType.Default,
+			Discord.MessageType.Reply,
+		].includes(msg.val.type))
 			return false;
 
 		if (User.equal(this.getUser(chan.type), user))
