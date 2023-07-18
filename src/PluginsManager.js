@@ -240,11 +240,6 @@ class PluginsManager {
 				plugin.handleMessage(user, chan, msg.content);
 		}
 
-		// don't support commands in public threads for now
-		if (chan.type == Channel.TYPE_DISCORD && chan.val.type == 'GUILD_PUBLIC_THREAD') {
-			return false;
-		}
-
 		const returnChannel = Channel.getReplyChan(chan, user);
 		let cmdStr = msg.content;
 		const isPrefixed = cmdStr.startsWith(this.commandPrefix);
