@@ -22,6 +22,16 @@ module.exports = {
 		]]
 	],
 	BOT_DISCORD_TOKEN: 'YOUR_TOKEN', // optional
+	DISCORD_USER_IDS: {
+		// discord IDs for usernames mentioned in this config file,
+		// for additional stability
+		'username': '12345678901234567890',
+	},
+	DISCORD_CHANNEL_IDS: {
+		// discord IDs for channels mentioned in this config file,
+		// for additional stability
+		'discord:server#channel': '12345678901234567890',
+	},
 	PLUGIN_WHITELIST: {
 		// only channels listed here will have a whitelist applied; all other
 		// channels will have access to all commands
@@ -45,11 +55,26 @@ module.exports = {
 		},
 		BRIDGE: {
 			BLACKLIST: [
-				'irc:username@titlebot/hostmask',
+				'irc:nick@titlebot/hostmask',
 			],
+			NICK_BLACKLISTS: {
+				// nicks to blacklist, per source channel
+				'irc:#channel': [
+					'nick',
+				],
+			},
 			// webhook messages from channels on this blacklist will not be relayed
 			WEBHOOK_BLACKLIST: [
 				'discord:server#channel',
+			],
+			MENTION_BLACKLIST: [
+				// nick highlights from this list will not be bridged
+				// as mentions
+				'nick',
+			],
+			MENTION_ALIASES: [
+				// translation table (from left nick to right nick) for mentions
+				['nick1', 'nick2'],
 			],
 			LINKS: [
 				['irc:#channel', 'discord:server#channel'],

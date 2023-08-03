@@ -132,6 +132,16 @@ class BridgePlugin {
 			}
 		}
 	}
+	isUserBlacklisted(user, chan) {
+		if (this.blacklist.includes(user.id)) {
+			return true;
+		}
+		const nickBlacklist = config.NICK_BLACKLISTS[chan.id];
+		if (nickBlacklist && nickBlacklist.includes(user.getNick(chan))) {
+			return true;
+		}
+		return false;
+	}
 	getDownstreams(chan, links = this.links) {
 		let downstreams = [];
 		for (const link of links) {
@@ -205,7 +215,7 @@ class BridgePlugin {
 		}
 	}
 	handleFullMessage(user, chan, msg) {
-		if (this.blacklist.includes(user.id)) {
+		if (this.isUserBlacklisted(user, chan)) {
 			return;
 		}
 		if (chan.id in this.webhookBlacklist && msg.isWebhook) {
@@ -267,7 +277,7 @@ class BridgePlugin {
 		doRelay(null);
 	}
 	handleAction(user, chan, msg) {
-		if (this.blacklist.includes(user.id)) {
+		if (this.isUserBlacklisted(user, chan)) {
 			return;
 		}
 		const downstreams = this.getDownstreams(chan);
@@ -279,7 +289,7 @@ class BridgePlugin {
 		}
 	}
 	handleEdit(user, chan, msg) {
-		if (this.blacklist.includes(user.id)) {
+		if (this.isUserBlacklisted(user, chan)) {
 			return;
 		}
 		if (user.getIsBot()) {
