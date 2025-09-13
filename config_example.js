@@ -37,6 +37,10 @@ module.exports = {
 		// channels will have access to all commands
 		'discord:server#channel': ['bridge'],
 	},
+	DISABLED_PLUGINS: {
+		// e.g.
+		// 'powder': true,
+	},
 	PLUGINS_CONFIG: {
 		GENERAL: {
 			OBSERVATIONS_FILENAME:

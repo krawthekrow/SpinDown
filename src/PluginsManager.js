@@ -50,6 +50,8 @@ class PluginsManager {
 		for(const [name, filename] of PLUGIN_NAMES){
 			const fullFilename = './plugins/' + filename + '.js';
 			delete require.cache[require.resolve(fullFilename)]
+			if (config.DISABLED_PLUGINS[name] ?? false)
+				continue;
 			try {
 				const pluginClass = require(fullFilename);
 				this.plugins.set(name, new pluginClass(this));
