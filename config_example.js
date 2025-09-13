@@ -30,7 +30,7 @@ module.exports = {
 	DISCORD_CHANNEL_IDS: {
 		// discord IDs for channels mentioned in this config file,
 		// for additional stability
-		'discord:server#channel': '12345678901234567890',
+		'server#channel': '12345678901234567890',
 	},
 	PLUGIN_WHITELIST: {
 		// only channels listed here will have a whitelist applied; all other
