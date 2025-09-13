@@ -7,6 +7,7 @@ const colors = require('irc-colors');
 const net = require('net');
 const https = require('https');
 const FormData = require('form-data');
+const Discord = require('discord.js');
 
 const ZWS = '\u200b';
 
@@ -221,13 +222,13 @@ class BridgePlugin {
 		if (chan.id in this.webhookBlacklist && msg.isWebhook) {
 			return;
 		}
-		const doRelay = (replyContent) => {
+		const doRelay = (repliesContent) => {
 			const downstreams = this.getDownstreams(chan);
 			for (const ochan of downstreams) {
 				const processedMsg = this.convertMessage(
 					chan, ochan, msg.content, msg.attachments
 				);
-				if (replyContent != null) {
+				for (const replyContent of (repliesContent ?? [])) {
 					const processedReply = '> ' + this.convertMessage(
 						chan, ochan, replyContent, []
 					);
@@ -236,42 +237,56 @@ class BridgePlugin {
 				this.relayMsg(chan, ochan, user, processedMsg);
 			}
 		};
+		const formatReplyMsg = (replyMsg) => {
+			let replyNick = null;
+			let isSelf = false;
+			if (replyMsg.author != null) {
+				const replyUser = new User(
+					User.TYPE_DISCORD,
+					replyMsg.author
+				);
+				isSelf = replyUser.getIsSelf(
+					this.env.ircCli, this.env.discordCli
+				);
+				replyNick = replyUser.getNick(chan);
+			}
+			let replyStr = replyMsg.content;
+			const openSqIndex = replyStr.indexOf('[');
+			const closeSqIndex = replyStr.indexOf(']');
+			const zwsIndex = replyStr.indexOf(ZWS);
+			const botReplyDetect =
+				openSqIndex == 0 &&
+				closeSqIndex != -1 && zwsIndex != -1 &&
+				openSqIndex < zwsIndex && zwsIndex < closeSqIndex;
+			if (isSelf && botReplyDetect) {
+				replyStr = `${replyStr.replace(ZWS, '')}`;
+			}
+			else if (replyNick != null) {
+				const nickPrepend = this.makeNickPrepend(chan, replyNick);
+				replyStr = `${nickPrepend} ${replyStr}`;
+			}
+			return replyStr;
+		};
 		if (msg.type == Message.TYPE_DISCORD) {
 			const replyRef = msg.val.reference;
-			if (replyRef != null && replyRef.messageId != null) {
-				chan.val.messages.fetch(replyRef.messageId).then(
-					(replyMsg) => {
-						let replyNick = 'unknown';
-						let isSelf = false;
-						if (replyMsg.author != null) {
-							const replyUser = new User(
-								User.TYPE_DISCORD,
-								replyMsg.author
-							);
-							isSelf = replyUser.getIsSelf(
-								this.env.ircCli, this.env.discordCli
-							);
-							replyNick = replyUser.getNick(chan);
+			if (replyRef != null) {
+				switch (replyRef.type) {
+					case Discord.MessageReferenceType.Default:
+						if (replyRef.messageId != null) {
+							chan.val.messages.fetch(replyRef.messageId).then(
+								(replyMsg) => {
+									doRelay([formatReplyMsg(replyMsg)]);
+								}
+							).catch(console.error);
+							return;
 						}
-						let replyStr = replyMsg.content;
-						const openSqIndex = replyStr.indexOf('[');
-						const closeSqIndex = replyStr.indexOf(']');
-						const zwsIndex = replyStr.indexOf(ZWS);
-						const botReplyDetect =
-							openSqIndex == 0 &&
-							closeSqIndex != -1 && zwsIndex != -1 &&
-							openSqIndex < zwsIndex && zwsIndex < closeSqIndex;
-						if (isSelf && botReplyDetect) {
-							replyStr = `${replyStr.replace(ZWS, '')}`;
-						}
-						else {
-							const nickPrepend = this.makeNickPrepend(chan, replyNick);
-							replyStr = `${nickPrepend} ${replyStr}`;
-						}
-						doRelay(replyStr);
-					}
-				).catch(console.error);
-				return;
+						break;
+					case Discord.MessageReferenceType.Forward:
+						doRelay([...msg.val.messageSnapshots.values()].map(
+							(msgSnapshot) => formatReplyMsg(msgSnapshot)
+						));
+						return;
+				}
 			}
 		}
 		doRelay(null);
