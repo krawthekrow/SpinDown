@@ -229,16 +229,28 @@ class BridgePlugin {
 					chan, ochan, msg.content, msg.attachments
 				);
 				for (const replyContent of (repliesContent ?? [])) {
+					let contentWithNickPrefix = '';
+					if (replyContent.nickPrepend != null) {
+						contentWithNickPrefix += replyContent.nickPrepend;
+						if (replyContent.content.length > 0)
+							contentWithNickPrefix += ' ';
+					}
+					contentWithNickPrefix += replyContent.content;
 					const processedReply = '> ' + this.convertMessage(
-						chan, ochan, replyContent, []
+						chan, ochan,
+						contentWithNickPrefix,
+						replyContent.attachments.values()
 					);
 					this.relayMsg(chan, ochan, user, processedReply, true);
 				}
 				this.relayMsg(chan, ochan, user, processedMsg);
 			}
 		};
-		const formatReplyMsg = (replyMsg) => {
-			let replyNick = null;
+		const formatReplyMsg = async (
+			replyMsg,
+			isForward = false
+		) => {
+			let nickPrepend = null;
 			let isSelf = false;
 			if (replyMsg.author != null) {
 				const replyUser = new User(
@@ -248,7 +260,8 @@ class BridgePlugin {
 				isSelf = replyUser.getIsSelf(
 					this.env.ircCli, this.env.discordCli
 				);
-				replyNick = replyUser.getNick(chan);
+				const replyNick = replyUser.getNick(chan);
+				nickPrepend = this.makeNickPrepend(chan, replyNick);
 			}
 			let replyStr = replyMsg.content;
 			const openSqIndex = replyStr.indexOf('[');
@@ -260,36 +273,63 @@ class BridgePlugin {
 				openSqIndex < zwsIndex && zwsIndex < closeSqIndex;
 			if (isSelf && botReplyDetect) {
 				replyStr = `${replyStr.replace(ZWS, '')}`;
+				nickPrepend = null;
 			}
-			else if (replyNick != null) {
-				const nickPrepend = this.makeNickPrepend(chan, replyNick);
-				replyStr = `${nickPrepend} ${replyStr}`;
+			if (replyMsg.attachments.size > 0) {
+				return [{
+					content: replyStr,
+					attachments: replyMsg.attachments,
+					nickPrepend,
+				}];
 			}
-			return replyStr;
+			const refs =
+				isForward ? [] : await formatDiscordMsgReferences(replyMsg, false)
+			if (
+				refs.length > 0 &&
+				replyMsg.content.length <= 0 &&
+				replyMsg.attachments.size <= 0
+			) {
+				return refs.map((ref) => ({
+					...ref,
+					nickPrepend: ref.nickPrepend ?? nickPrepend,
+				}));
+			}
+			return [...refs, {
+				content: replyStr,
+				attachments: replyMsg.attachments,
+				nickPrepend,
+			}];
 		};
-		if (msg.type == Message.TYPE_DISCORD) {
-			const replyRef = msg.val.reference;
+		const formatDiscordMsgReferences = async (
+			discordMsg,
+			includeReplies = true
+		) => {
+			const replyRef = discordMsg.reference;
 			if (replyRef != null) {
 				switch (replyRef.type) {
 					case Discord.MessageReferenceType.Default:
-						if (replyRef.messageId != null) {
-							chan.val.messages.fetch(replyRef.messageId).then(
-								(replyMsg) => {
-									doRelay([formatReplyMsg(replyMsg)]);
-								}
-							).catch(console.error);
-							return;
+						if (includeReplies && replyRef.messageId != null) {
+							const replyMsg =
+								await chan.val.messages.fetch(replyRef.messageId);
+							return await formatReplyMsg(replyMsg);
 						}
 						break;
 					case Discord.MessageReferenceType.Forward:
-						doRelay([...msg.val.messageSnapshots.values()].map(
-							(msgSnapshot) => formatReplyMsg(msgSnapshot)
-						));
-						return;
+						return (await Promise.all(
+							[...discordMsg.messageSnapshots.values()].map(
+								(msgSnapshot) => formatReplyMsg(msgSnapshot, true)
+							)
+						)).flat();
 				}
 			}
+			return [];
+		};
+		if (msg.type == Message.TYPE_DISCORD) {
+			formatDiscordMsgReferences(msg.val)
+				.then(doRelay).catch(console.error);
+			return;
 		}
-		doRelay(null);
+		doRelay([]);
 	}
 	handleAction(user, chan, msg) {
 		if (this.isUserBlacklisted(user, chan)) {
